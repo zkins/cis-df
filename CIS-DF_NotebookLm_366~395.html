@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            cat: "Ingestion",
+            q: "Q1. Scenario: A third-party integration utilizing the Identification and Reconciliation Engine (IRE) keeps failing to insert records because it is missing data for a field marked as mandatory in the dictionary. To prevent these record creation failures without changing the dictionary entry, what should an administrator do?",
+            a: [
+                "Turn off the glide.class.upgrade.enabled property.",
+                "Set the system property glide.required.attribute.enabled to false.",
+                "Create a Health Inclusion Rule for the external data.",
+                "Configure an Orphan Rule in the CI Class Manager."
+            ],
+            ans: 1,
+            expl: "Setting glide.required.attribute.enabled to false disables the strict enforcement of mandatory attributes during IRE processing, preventing integration imports from failing when required data is missing."
+        },
+        {
+            cat: "Health",
+            q: "Q2. Scenario: You want to monitor missing data for the 'Support Group' field on Configuration Items without causing any database errors or record creation disruptions during ServiceNow Discovery. What is the ServiceNow best practice?",
+            a: ["Mark the field as 'Required'.", "Create a Scripted Audit.", "Mark the field as 'Recommended' in the CI Class Manager.", "Apply a Dictionary Override."],
+            ans: 2,
+            expl: "Recommended fields are used only for visibility on the Completeness Scorecard and do not impose database restrictions or cause disruptions during automated discovery."
+        },
+        {
+            cat: "Configuration",
+            q: "Q3. Scenario: The Serial Number field is defined on the base cmdb_ci table and is not mandatory. You have a requirement to make this field mandatory ONLY for the Hardware class and its extended child classes, without impacting any parent classes. Which method should you use?",
+            a: ["Reclassification Restriction Rule", "CMDB Data Manager Policy", "Health Inclusion Rule", "Dictionary Override"],
+            ans: 3,
+            expl: "A dictionary override allows an administrator to change the default setting inherited from a parent class, enforcing the requirement specifically for the target child class and its extensions."
+        },
+        {
+            cat: "Health",
+            q: "Q4. Scenario: A stakeholder wants to view the Compliance Scorecard on the CMDB Health Dashboard to ensure servers meet specific memory and OS requirements. Which two types of audits are actually calculated and displayed on the Compliance Scorecard?",
+            a: ["Required and Recommended Audits", "Certification and Attestation Policies", "Desired State and Scripted Audits", "Compliance and Compliance Architecture Audits"],
+            ans: 2,
+            expl: "Only Desired State and Scripted Audits are calculated and displayed on the CMDB Health Dashboard's Compliance Scorecard."
+        },
+        {
+            cat: "Health",
+            q: "Q5. Scenario: A compliance requirement is too restrictive to be defined using standard Certification Template conditions. The administrator decides to write a custom script to query for the specific values. What specific role is required for a user to conduct a Scripted Audit?",
+            a: ["admin", "data_manager_admin", "cmdb_admin", "certification_admin"],
+            ans: 3,
+            expl: "A scripted audit enables users with the certification_admin role to conduct an audit from a script rather than using standard template conditions."
+        },
+        {
+            cat: "Health",
+            q: "Q6. Scenario: You are tasked with setting up a new Desired State audit to verify that all Windows Computers have a minimum of 1000MB of RAM. Which three components must be configured to execute this audit properly?",
+            a: ["Certification Filters, Certification Templates, Audit", "Remediating Rule, Workflow, Remediation Task", "Policies, De-duplication Templates, Discovery Sources", "Recommended Fields, Dictionary Override, Scorecard"],
+            ans: 0,
+            expl: "Configuring a Desired State audit requires creating a Certification Filter (the scope), a Certification Template (the conditions), and the Audit record itself."
+        },
+        {
+            cat: "Health",
+            q: "Q7. Scenario: Two identical CIs exist in the CMDB, but the CMDB Health Dashboard Correctness scorecard is NOT flagging them as duplicates. What is the most likely reason for this behavior?",
+            a: ["Both CIs lack an Assigned To value.", "The staleness rule for the class is set to 60 days.", "Both CIs have a populated 'Discovery Source' field.", "They are dependent non-hardware CIs."],
+            ans: 2,
+            expl: "If duplicate CIs have a populated Discovery Source field, the scorecard will not flag them because the IRE assumes they have already been processed."
+        },
+        {
+            cat: "Health",
+            q: "Q8. Scenario: You have just provisioned a new, out-of-the-box ServiceNow instance. How many Orphan rules are provided in the base system?",
+            a: ["1 for every CI class", "5", "Depends on the CIs discovered", "0"],
+            ans: 3,
+            expl: "There are 0 base system orphan rules. They must be manually created by administrators based on specific organizational relationship requirements."
+        },
+        {
+            cat: "Health",
+            q: "Q9. Scenario: You are investigating the Staleness metric on the CMDB Health Dashboard. Even if Discovery scans a CI and finds no attribute changes, which specific database field does the system use to calculate the staleness timestamp?",
+            a: ["last_discovered", "sys_updated_on", "sys_created_on", "discovery_source"],
+            ans: 1,
+            expl: "The Staleness metric calculation is purely based on the sys_updated_on timestamp. Any discovery scan, even without changes, updates this timestamp."
+        },
+        {
+            cat: "Governance",
+            q: "Q10. Scenario: An administrator is using the Duplicate CI Remediator wizard to resolve a de-duplication task. What three criteria does ServiceNow officially recommend using to determine which duplicate should be kept as the Main CI?",
+            a: [
+                "Least Relationships, Newest Created, Least Recent Updated",
+                "Most Relationships, Oldest Created, Most Recent Updated",
+                "Most Relationships, Newest Created, Least Recent Updated",
+                "Most Support Groups, Highest RAM, Oldest Created"
+            ],
+            ans: 1,
+            expl: "The recommended Main CI is typically the one that has the most relationships, is the oldest created, and has been most recently updated."
+        },
+        {
+            cat: "Configuration",
+            q: "Q11. Scenario: To track duplicate records, legacy ServiceNow versions used the Discovery source field. In recent releases, which field is specifically used to indicate that a CI is a duplicate of another CI while preserving the original discovery source value?",
+            a: ["Replaced By", "Correlation ID", "Duplicate Of", "Master CI"],
+            ans: 2,
+            expl: "Recent releases leverage the Duplicate Of field to provide visibility to duplicate CIs, helping track duplicates while preserving the Discovery source field value."
+        },
+        {
+            cat: "Configuration",
+            q: "Q12. Scenario: The glide.identification_engine.skip_duplicates property is set to true. During discovery, 3 duplicate CIs are encountered for a specific server. Assuming the default threshold is 5, what action does the Identification and Reconciliation Engine (IRE) take?",
+            a: ["It drops the entire payload.", "It updates all 3 duplicate CIs simultaneously.", "It picks the oldest of the duplicate CIs as a match and updates it.", "It triggers a Reclassification Task."],
+            ans: 2,
+            expl: "If skip_duplicates is true and the duplicate count is below the threshold, the oldest of the duplicate CIs is picked as a match and updated."
+        },
+        {
+            cat: "Governance",
+            q: "Q13. Scenario: Your organization is deploying Now Assist for CMDB to leverage generative AI for automated duplicate CI management. To remedy multiple de-duplication tasks in a single bulk operation, which underlying ServiceNow feature does the AI utilize?",
+            a: ["Duplicate CI Remediator", "De-duplication Templates", "Scripted Audits", "CMDB Remediation Rules"],
+            ans: 1,
+            expl: "Now Assist for CMDB leverages De-duplication Templates to automatically identify, suggest resolution steps, and remedy multiple de-duplication tasks in bulk."
+        },
+        {
+            cat: "Configuration",
+            q: "Q14. Scenario: Automatic CI reclassification is enabled by default. A Windows Server is incorrectly discovered and its class is changed to a generic Server. What is the primary risk associated with this class downgrade operation?",
+            a: [
+                "The CI will automatically be deleted by Data Manager.",
+                "It triggers unintended CMDB Remediation workflows.",
+                "It can lead to data loss because attributes not available in the generic Server class are lost.",
+                "A duplicate CI is guaranteed to be created."
+            ],
+            ans: 2,
+            expl: "During a CI class downgrade, attributes that exist in the original class but not in the new assigned class are lost, leading to permanent data loss."
+        },
+        {
+            cat: "Ingestion",
+            q: "Q15. Scenario: An administrator sets glide.class.upgrade.enabled to false. During a discovery run, a basic Server CI is identified as a Windows Server. What is the expected behavior?",
+            a: ["The CI is automatically upgraded.", "The CI is downgraded instead.", "The incoming payload is dropped completely.", "A CI reclassification task is generated for manual review."],
+            ans: 3,
+            expl: "When automatic upgrade is set to false, the record is not automatically reclassified, and a reclassification task is generated for manual review."
+        },
+        {
+            cat: "Configuration",
+            q: "Q16. Scenario: glide.class.downgrade.enabled and update_without_downgrade_enabled are both TRUE. A Reclassification Restriction Rule prevents downgrades from Server to Computer. What happens if a Windows Server payload attempts to downgrade to a Computer?",
+            a: ["Allowed to be downgraded.", "NOT allowed to be downgraded, and attributes CANNOT be updated.", "NOT allowed to be downgraded, but attributes CAN be updated.", "Switched to a Linux Server instead."],
+            ans: 2,
+            expl: "Update_without_downgrade_enabled=true allows the IRE to process the incoming payload and update attributes even if the class downgrade is restricted."
+        },
+        {
+            cat: "Health",
+            q: "Q17. Scenario: Cloud Dimensions wants to initiate a custom workflow directly from a remediation task on the CMDB Health Dashboard. Which configuration record MUST be created to link them?",
+            a: ["Remediation Task", "CI Class Manager Orphan Rule", "CMDB Remediation Rule", "Scheduled Job"],
+            ans: 2,
+            expl: "A remediation workflow is directly referenced from a CMDB Remediation Rule. The remediation task then uses this rule to initiate the workflow."
+        },
+        {
+            cat: "Health",
+            q: "Q18. Scenario: Most remediation tasks can be generated automatically. Which specific tasks DO NOT adhere to this automatic generation flow and must be manually configured through the CI Class Manager?",
+            a: ["Stale CI tasks", "De-duplication tasks", "Compliance audit tasks", "Required fields tasks"],
+            ans: 2,
+            expl: "Compliance audit tasks must be explicitly configured through the CI Class Manager by adjusting Health settings under the Compliance section."
+        },
+        {
+            cat: "Governance",
+            q: "Q19. Scenario: CMDB Data Manager is a policy-driven framework for CI end-of-life operations. Which of the following sets represents valid Data Manager policy types?",
+            a: ["Upgrade, Downgrade, Switch", "Duplicate, Stale, Orphan", "Identification, Reconciliation, Remediation", "Retirement, Archiving, Deletion, Attestation, Certification"],
+            ans: 3,
+            expl: "Valid CMDB Data Manager policies include Retire, Archive, Delete, Attestation, and Certification."
+        },
+        {
+            cat: "Governance",
+            q: "Q20. Scenario: The legacy Data Manager (UI16 page) is deprecated. Where must administrators now go to author, publish, and schedule new workflow-based policies?",
+            a: ["CMDB Workspace", "CI Class Manager", "System Properties", "Service Portal"],
+            ans: 0,
+            expl: "The new workflow-based Data Manager is accessible through the CMDB Workspace."
+        },
+        {
+            cat: "Governance",
+            q: "Q21. Scenario: To effectively manage and delegate tasks generated by CMDB Data Manager policies, specific roles must be assigned to users. Which two roles were introduced for this feature?",
+            a: ["admin and itil", "data_manager_admin and data_manager_user", "certification_admin and compliance_user", "cmdb_admin and remediation_user"],
+            ans: 1,
+            expl: "Two roles are explicitly introduced to use the Data Manager feature: data_manager_admin and data_manager_user."
+        },
+        {
+            cat: "Governance",
+            q: "Q22. Scenario: To ensure Data Manager policy tasks are correctly and automatically assigned to the responsible operational teams, which CI field is highly recommended to leverage?",
+            a: ["Support Group", "Change Group", "Assigned To", "Managed By Group"],
+            ans: 3,
+            expl: "ServiceNow strongly recommends leveraging the Managed By Group field associated with the respective CIs for policy task assignment."
+        },
+        {
+            cat: "CSDM",
+            q: "Q23. Scenario: Legacy lifecycle synchronization is enabled. A technician manually updates the Install Status field on the CI record. What happens to the State field on the associated Asset record?",
+            a: ["It is updated to match.", "The CI change is reverted.", "It is NOT synchronized (unchanged).", "A reclassification task is generated."],
+            ans: 2,
+            expl: "The synchronization of legacy status fields only syncs from the Asset record to the CI record, not backwards from the CI to the Asset."
+        },
+        {
+            cat: "CSDM",
+            q: "Q24. Scenario: Your organization wants to align with CSDM by migrating legacy status to Life Cycle Stage and Status. What specific action performs a one-time synchronization?",
+            a: ["Selecting 'Enable Life Cycle Sync' button.", "Running 'Compliance Score Calculation' job.", "Creating a Data Manager Archive policy.", "Setting glide.class.upgrade.enabled to true."],
+            ans: 0,
+            expl: "The 'Enable Life Cycle Sync' button in the life_cycle_mapping table performs a one-time sync between legacy status and CSDM life cycle fields."
+        },
+        {
+            cat: "Governance",
+            q: "Q25. Scenario: You want to periodically verify the actual physical existence of IT infrastructure components. Which Data Manager policy type is designed for this?",
+            a: ["Certification Policy", "Attestation Policy", "Archive Policy", "Delete Policy"],
+            ans: 1,
+            expl: "An Attestation Policy is used to validate that a CI exists, meaning it verifies the actual physical existence of the infrastructure."
+        },
+        {
+            cat: "Health",
+            q: "Q26. Scenario: The Logistics Company imports 1,000 laptops but does not plan to actively manage them yet. They create a Health Inclusion Rule. What is the purpose of this rule?",
+            a: ["Filter which CI classes and records are calculated as part of the Health Dashboard.", "Identify and resolve duplicate CIs automatically.", "Prevent CI class downgrades.", "Synchronize CSDM life cycle fields."],
+            ans: 0,
+            expl: "A Health Inclusion Rule helps filter which CIs and classes are calculated on the dashboard, reducing data displayed for CIs not ready to be managed."
+        },
+        {
+            cat: "Health",
+            q: "Q27. Scenario: You are analyzing a CMDB group with 10 servers. Server 1 fails duplicate, Server 2 fails orphan, and Server 3 fails stale. The other 7 pass all three. What is the overall Correctness score?",
+            a: ["90%", "80%", "70%", "30%"],
+            ans: 2,
+            expl: "Since 3 unique servers failed at least one Correctness metric, only 7 are healthy. Total score: 70%."
+        },
+        {
+            cat: "Health",
+            q: "Q28. Scenario: In a group of 10 servers, 1 and 2 fail duplicate, 3 fails stale, and 4 fails orphan. If looking ONLY at the 'non-duplicate' metric score, what is the percentage?",
+            a: ["60%", "80%", "70%", "90%"],
+            ans: 1,
+            expl: "Only 2 out of 10 servers failed the duplicate check specifically, so 8 pass, resulting in an 80% score for that metric."
+        },
+        {
+            cat: "Health",
+            q: "Q29. Scenario: You evaluate 20 servers. 1-4 have duplicates (8 total), no Discovery Source. Server 5 has a duplicate, both records have Discovery Source populated. What will the Non-Duplicate score be?",
+            a: ["12/20", "16/20", "15/20", "10/20"],
+            ans: 0,
+            expl: "IRE ignores Server 5's duplicates due to Discovery Source. Only the 8 records from 1-4 are flagged. 20 total minus 8 flagged = 12 non-duplicates."
+        },
+        {
+            cat: "Health",
+            q: "Q30. Scenario: Beyond pure time savings, what is highlighted as a major intangible benefit of ServiceNow's 'Now on Now' CMDB audit automation?",
+            a: ["Hardware auto-procurement.", "100% automated remediation.", "CI information kept up-to-date in weeks instead of quarters or years.", "Auto-inheritance of mandatory fields."],
+            ans: 2,
+            expl: "An intangible benefit of audit automation is getting CI information up-to-date in weeks rather than relying on manual efforts that take quarters or years."
+        }
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        { cat: "Insight", q: "What are the three pillars supported by CMDB tools and features?", a: ["Discover, Map, Identify", "Ingest, Govern, Insight", "Plan, Build, Run", "Hardware, Software, Network"], ans: 1, expl: "Ingest, Govern, Insight가 CMDB의 3대 핵심 요소입니다." },
+        { cat: "Ingestion", q: "Which of the following tools is categorized under the 'Ingest' pillar?", a: ["ServiceNow Discovery", "CI Class Manager", "CMDB Query Builder", "CMDB Data Manager"], ans: 0, expl: "Discovery는 데이터를 유입시키는 Ingest 도구입니다." },
+        { cat: "Ingestion", q: "Based on Multisource CMDB data, a dynamic reconciliation rule type of 'Most Reported' updates the CMDB with what?", a: ["The largest numeric value", "The value most frequently reported across all data sources", "The value from the highest priority source", "The most recent value"], ans: 1, expl: "가장 많은 소스에서 보고된 값을 신뢰하여 업데이트합니다." },
+        { cat: "Ingestion", q: "ServiceNow Discovery is also referred to by which of the following terms?", a: ["Vertical discovery", "Agent-based discovery", "Horizontal discovery", "Real-time discovery"], ans: 2, expl: "기본 탐색 방식은 Horizontal discovery입니다." },
+        { cat: "Ingestion", q: "Why is ServiceNow Discovery NOT considered a true real-time discovery solution?", a: ["Because it only discovers hardware", "Because it is schedule based", "Because it requires manual data entry", "Because it is limited to cloud environments"], ans: 1, expl: "Discovery는 실시간이 아닌 스케줄 기반으로 작동합니다." },
+        { cat: "Ingestion", q: "Which product does ServiceNow offer for true real-time discovery and monitoring?", a: ["Agent Client Collector", "Service Mapping", "IntegrationHub ETL", "Discovery Schedules"], ans: 0, expl: "ACC(Agent Client Collector)는 실시간 모니터링을 제공합니다." },
+        { cat: "Ingestion", q: "What is the first phase of the ServiceNow Discovery process?", a: ["Identification Phase", "Classification Phase", "Exploration Phase", "Scan Phase"], ans: 3, expl: "IP 대역을 확인하는 Scan Phase가 첫 단계입니다." },
+        { cat: "Ingestion", q: "In the Classification Phase of Discovery, what is used to determine the device type?", a: ["Identification rules", "Probes and sensors", "MID Server schedules", "Service Graph Connectors"], ans: 1, expl: "Probes and sensors를 통해 기기를 분류합니다." },
+        { cat: "Ingestion", q: "Which phase of Discovery gathers identifying attributes to correctly match and update a CI using identification rules?", a: ["Scan Phase", "Classification Phase", "Identification Phase", "Exploration Phase"], ans: 2, expl: "Identification Phase에서 식별 속성을 대조합니다." },
+        { cat: "Ingestion", q: "What acts as a bridge between the ServiceNow instance and the organization's internal network during Discovery?", a: ["IntegrationHub ETL", "The ServiceNow MID Server", "Agent Client Collector", "Import Sets"], ans: 1, expl: "MID Server가 네트워크 간 브릿지 역할을 합니다." },
+        { cat: "Ingestion", q: "Since Discovery is agentless, what protocol does the MID Server use to discover Unix or Linux computers?", a: ["SSH", "SNMP", "WMI", "HTTP"], ans: 0, expl: "Unix/Linux 탐색에는 SSH가 사용됩니다." },
+        { cat: "Ingestion", q: "What defines the parameters for horizontal Discovery, including the scope of the searches, timing of scans, and assigned MID Servers?", a: ["CI Class Manager", "Discovery schedule", "Identification rules", "Data refresh rules"], ans: 1, expl: "Discovery schedule에서 모든 탐색 조건을 정의합니다." },
+        { cat: "Ingestion", q: "Which of the following is an example of discoverable data collected by ServiceNow Discovery?", a: ["Financial reports", "Incident resolution times", "Hardware details, software details, and network details", "User passwords"], ans: 2, expl: "HW, SW, 네트워크 등 인프라 정보를 수집합니다." },
+        { cat: "CSDM", q: "An Application Service is stored in which parent class (or one of its sub-classes)?", a: ["[cmdb_ci_appl]", "[cmdb_ci_service_auto]", "[cmdb_ci_server]", "[cmdb_ci_group]"], ans: 1, expl: "cmdb_ci_service_auto가 애플리케이션 서비스의 부모입니다." },
+        { cat: "CSDM", q: "Which Application Service type is the best fit for small application services easily grouped using CI list filters or CMDB queries?", a: ["Dynamic CI Group", "Service Mapping (Top-Down)", "Tag-Based", "Manual mapping"], ans: 0, expl: "필터나 쿼리로 묶는 방식은 Dynamic CI Group입니다." },
+        { cat: "CSDM", q: "Which mapping type is the best fit for cloud-native or Containers-based virtual machine environments?", a: ["Service Mapping", "Dynamic CI Group", "Tag-based", "Agent Client Collector"], ans: 2, expl: "클라우드 환경에는 Tag-based 매핑이 가장 적합합니다." },
+        { cat: "CSDM", q: "What provides a standardized set of terms and definitions for all ServiceNow products, forming the foundation for service modeling within the CMDB?", a: ["ITIL definitions", "Common Service Data Model (CSDM)", "Discovery Admin Workspace", "IRE API"], ans: 1, expl: "CSDM은 서비스 모델링의 표준 프레임워크입니다." },
+        { cat: "Ingestion", q: "What is a key enabler for visibility and monitoring, as well as discovering devices in a secure network where external solutions are not permitted?", a: ["MID Server SNMP traps", "IntegrationHub ETL", "Discovery Service Mapping", "Agent Client Collector (ACC)"], ans: 3, expl: "보안망 내 장비 탐색에는 에이전트 기반(ACC)이 효과적입니다." },
+        { cat: "Ingestion", q: "What application is designed to create and manage ETL transform maps, integrating third-party data into the CMDB while ensuring data integrity?", a: ["IntegrationHub ETL", "Transform Hub", "CMDB Data Manager", "Discovery Schedules"], ans: 0, expl: "IntegrationHub ETL은 서드파티 통합 관리용 도구입니다." },
+        { cat: "Ingestion", q: "IntegrationHub ETL leverages which components to streamline data processing and integration to prevent duplicate CIs?", a: ["MID and ACC", "CSDM and ITSM", "RTE and IRE", "Import and Export Sets"], ans: 2, expl: "RTE와 IRE를 통해 정합성을 보장합니다." },
+        { cat: "Ingestion", q: "In IntegrationHub ETL, what term describes the feed from which raw source data is imported?", a: ["Target Entity", "Data Source", "Transform Map", "Payload rule"], ans: 1, expl: "원본 데이터 공급원을 Data Source라고 합니다." },
+        { cat: "Ingestion", q: "The system property glide.identification_engine.non_cmdb_tables specifies a list of what?", a: ["Tables that cannot be updated by Discovery", "Non-CMDB tables supported by default for IntegrationHub ETL", "Tables reserved for ITSM", "Tables excluded from CSDM"], ans: 1, expl: "ETL에서 지원하는 비-CMDB 테이블 목록입니다." },
+        { cat: "Configuration", q: "Which centralized tool allows you to view and manage the CMDB class hierarchy, basic class definitions, and settings for identification and reconciliation rules?", a: ["CMDB Integrations Dashboard", "Service Graph Connector", "CI Class Manager", "CMDB 360 Workspace"], ans: 2, expl: "CI Class Manager에서 클래스와 규칙을 중앙 관리합니다." },
+        { cat: "Configuration", q: "In the CI Class Manager, what flag determines if a class can be extended?", a: ["Principal flag", "Extensible flag", "Identification flag", "Active flag"], ans: 1, expl: "Extensible flag가 true여야 확장이 가능합니다." },
+        { cat: "Configuration", q: "What designation is given to a CI class to streamline ITSM processes by filtering the CIs that appear in the 'Configuration Item' reference field?", a: ["Extensible Class", "Dependent Class", "Principal Class", "Parent Class"], ans: 2, expl: "Principal Class는 업무용 CI 필터링에 사용됩니다." },
+        { cat: "Governance", q: "If you want to assign a group responsible for managing an entire class of CIs, what should you configure in the CI Class Manager?", a: ["Managed By Group", "Assignment Group", "Support Group", "Governance Group"], ans: 0, expl: "Managed By Group으로 클래스 관리 그룹을 지정합니다." },
+        { cat: "Configuration", q: "What rules are used to uniquely identify CIs within the CMDB and are essential for preventing the creation of duplicate records?", a: ["Reconciliation rules", "Data refresh rules", "Identification rules", "De-duplication rules"], ans: 2, expl: "Identification rules가 중복 방지의 핵심입니다." },
+        { cat: "Configuration", q: "What features identify how one CI relies on another, helping in impact analysis and lifecycle management?", a: ["Suggested Relationships", "Dependent Relationships", "Service Mappings", "Dynamic CI Groups"], ans: 1, expl: "Dependent Relationships는 영향도 분석에 필수적입니다." },
+        { cat: "Configuration", q: "What type of rule is designed to manage how and when data can be refreshed in the CMDB if a higher priority data source has not updated it in a specific period?", a: ["Data refresh rules", "Reconciliation rules", "Priority rules", "Stale CI rules"], ans: 0, expl: "Data refresh rules는 소스별 데이터 갱신 시기를 조절합니다." },
+        { cat: "Configuration", q: "What are predefined recommendations that help users establish logical and meaningful connections between CIs (e.g., Runs on :: Hosts)?", a: ["Dependent Relationships", "Suggested Relationships", "Extensible Rules", "Identification Rules"], ans: 1, expl: "Suggested Relationships는 클래스 간 권장 관계 모델입니다." },
+        { cat: "Configuration", q: "In the CI Class Manager, what feature provides a convenient way to quickly access the CI classes you use most frequently?", a: ["Pinned classes", "Principal classes", "Custom classes", "Base classes"], ans: 0, expl: "Pinned classes로 자주 쓰는 클래스를 즐겨찾기 할 수 있습니다." },
+        { cat: "Configuration", q: "What component ensures accurate and consistent data by identifying and reconciling configuration items from multiple data sources?", a: ["MID Server", "CSDM framework", "IRE (Identification and Reconciliation Engine)", "Transform Map"], ans: 2, expl: "IRE 엔진이 매칭과 조정을 담당합니다." },
+        { cat: "Governance", q: "When the IRE encounters duplicate CIs during ingestion, what does it group each set of duplicate CIs into for review?", a: ["A reclassification task", "A de-duplication task", "A stale CI record", "A data refresh rule"], ans: 1, expl: "중복 CI는 de-duplication task로 묶입니다." },
+        { cat: "Governance", q: "During CI identification, if automatic reclassification is disabled and a matched CI needs to switch to another class, what is generated?", a: ["A de-duplication task", "A reclassification task", "An Incident ticket", "A mapping error"], ans: 1, expl: "클래스 변경이 필요할 때 reclassification task가 생깁니다." },
+        { cat: "Configuration", q: "How does the IRE ensure that data sources do not write directly to the CMDB to prevent inconsistencies?", a: ["Data sources must use manual import sets", "Data sources call a centralized set of APIs first", "Data sources only write during scheduled maintenance windows", "Data sources are limited to updating non-CMDB tables"], ans: 1, expl: "중앙 집중식 API를 통해서만 데이터를 입력하게 강제합니다." },
+        { cat: "Configuration", q: "What is a key benefit of configuring Identification Rules?", a: ["Generates automated reports for ITSM", "Extends the CMDB class hierarchy", "Prevents duplicate CIs and ensures data integrity", "Deletes stale CIs automatically"], ans: 2, expl: "중복 방지와 데이터 무결성이 가장 큰 이점입니다." },
+        { cat: "Configuration", q: "During the Attribute Matching step, what happens if the IRE compares attributes of incoming data and finds a match in the CMDB?", a: ["A new CI record is created", "The existing CI is updated", "The data is discarded", "A de-duplication task is created"], ans: 1, expl: "매칭되는 속성이 있으면 기존 레코드를 업데이트합니다." },
+        { cat: "Governance", q: "What problem occurs when identification rules fail to ensure each CI is uniquely expressed, resulting in multiple records for a single real-world entity?", a: ["Stale CIs", "Overloaded CIs", "Duplicate CIs", "Orphan CIs"], ans: 2, expl: "하나의 실체에 여러 레코드가 있는 현상이 중복(Duplicate)입니다." },
+        { cat: "Governance", q: "What problem occurs when different real-world CIs are identified as the same CI, meaning one CI is created when several should have been created?", a: ["Duplicate CIs", "Overloaded CIs", "Pinned CIs", "Missing CIs"], ans: 1, expl: "서로 다른 실체가 하나로 합쳐지는 현상이 Overloaded입니다." },
+        { cat: "Configuration", q: "In an identification rule, what happens if 'Allow null attribute' is set to false?", a: ["Null values are automatically replaced with defaults", "The rule is bypassed", "All criterion attributes must have values to attempt matching with an identifier entry", "Null attributes are allowed for independent CIs only"], ans: 2, expl: "false이면 비어있는 값으로 매칭을 시도하지 않습니다." },
+        { cat: "Configuration", q: "How can software applications best be identified since they often do not have a unique serial number?", a: ["By the physical server they run on", "By the individual process that they run", "By their installation directory only", "By the user account that installed them"], ans: 1, expl: "SW는 실행 중인 개별 프로세스로 식별하는 것이 좋습니다." },
+        { cat: "Configuration", q: "What rules are applied to determine how and if incoming data should update the existing CIs in the CMDB?", a: ["Data refresh rules", "Identification rules", "Reconciliation rules", "De-duplication rules"], ans: 2, expl: "Reconciliation rules가 업데이트 권한을 제어합니다." },
+        { cat: "Configuration", q: "To refine control and block inserts from a specific data source, a CMDB administrator can configure what?", a: ["IRE Data Source Rules", "Extensible flags", "Principal classes", "Transform scripts"], ans: 0, expl: "IRE Data Source Rules로 특정 소스의 신규 생성을 차단합니다." },
+        { cat: "Configuration", q: "What happens if a higher-priority data source does not perform an update within the interval defined by a Data Refresh Rule?", a: ["The CI is deleted from the CMDB", "A de-duplication task is created", "ServiceNow will allow a lower-priority data source to perform the update", "The CI is marked as overloaded"], ans: 2, expl: "상위 소스가 소식이 없으면 하위 소스 업데이트를 허용합니다." },
+        { cat: "Insight", q: "What functionality was developed to retain complete history about discovery sources and proposed values involved in updates of CI attributes?", a: ["Service Mapping", "CI Class Manager", "CMDB 360 / Multisource CMDB", "IntegrationHub ETL"], ans: 2, expl: "CMDB 360은 다중 소스 이력을 관리합니다." },
+        { cat: "Configuration", q: "Reconciliation rules are primarily configured to control which of the following actions?", a: ["Reading of a CI", "Deletion of a CI", "Updates to a CI", "Extending a CI class"], ans: 2, expl: "Reconciliation은 CI 업데이트 권한을 통제합니다." },
+        { cat: "Ingestion", q: "What is the oldest method in ServiceNow for importing and transforming data into the CMDB?", a: ["Import Sets and Transform Maps", "IntegrationHub ETL", "Service Graph Connectors", "Agent Client Collector"], ans: 0, expl: "가장 고전적인 방식은 Import Sets 방식입니다." },
+        { cat: "Ingestion", q: "In Import Sets, what temporarily holds data extracted from external sources like CSV files, Excel spreadsheets, or APIs?", a: ["Target CMDB tables", "Data Staging / Import Sets", "Field Mappings", "Transform Scripts"], ans: 1, expl: "임시 저장 장소는 Data Staging 테이블입니다." },
+        { cat: "Configuration", q: "Which of the following is a key benefit of using the CI Class Manager?", a: ["It performs horizontal discovery", "It replaces the need for the IRE", "It provides a centralized place to view and manage the CMDB class hierarchy", "It acts as an agent on client machines"], ans: 2, expl: "중앙에서 계층 구조를 관리하는 것이 장점입니다." },
+        { cat: "Insight", q: "Which CMDB dashboard exposes key performance and error metrics for all CMDB integrations including installed Service Graph Connectors?", a: ["CMDB Integrations Dashboard", "CMDB 360 Dashboard", "De-duplication Dashboard", "CMDB Health Dashboard"], ans: 0, expl: "통합 상태 확인은 CMDB Integrations Dashboard에서 합니다." },
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>

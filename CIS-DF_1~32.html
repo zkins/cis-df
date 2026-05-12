@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (1 ~ 32)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 20px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 350px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-meta { font-size: 13px; color: #888; margin-bottom: 10px; font-weight: bold; }
+        .question-text { font-size: 18px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 18px; margin-bottom: 12px; border-radius: 12px; font-size: 16px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list input { position: absolute; opacity: 0; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 24px; height: 24px; background: #ddd; color: #666; text-align: center; line-height: 24px; border-radius: 4px; margin-right: 10px; font-size: 12px; font-weight: bold; vertical-align: middle; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .multi-hint { font-size: 12px; color: var(--sn-main); margin-bottom: 10px; display: block; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+        .btn-submit { background: var(--sn-success); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 120px; height: 120px; border-radius: 50%; border: 8px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        .report-card { text-align: left; background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        .review-section { text-align: left; margin-top: 20px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #ccc; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+        .review-q { font-weight: bold; margin-bottom: 8px; font-size: 15px; }
+        .review-ans { font-size: 14px; margin-top: 5px; line-height: 1.6; }
+        .review-expl { font-size: 13px; color: #666; background: #f9f9f9; padding: 10px; border-radius: 5px; margin-top: 10px; border-top: 1px solid #eee; }
+        .txt-correct { color: var(--sn-success); font-weight: bold; }
+        .txt-wrong { color: var(--sn-error); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 40px 20px; text-align: center;">
+    <h1 style="color: var(--sn-main);">ServiceNow CIS-DF<br>Data Foundations</h1>
+    <p>32 Questions | 45 Minutes</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 32</span>
+        <div class="timer" id="timer">45:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" id="final-submit-btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">SUBMIT / FINISH</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1 id="res-status">RESULT</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div class="review-section">
+        <h3>Question Review</h3>
+        <div id="review-container"></div>
+    </div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="resetExam()">RETRY EXAM</button>
+</div>
+
+<script>
+    const questions = [
+        // --- CATEGORY: Insight (5문항) ---
+        { cat: "Insight", q: "What insights are gained from CMDB 360 queries? (Choose 2)", a: ["Duplicate configuration items from different data sources", "Orphan Cis created from different data sources", "Gaps in attribute data from different data sources", "Different attribute values from different data sources", "Unique Cls created from different data sources"], ans: [2, 3], expl: "CMDB 360은 소스 간 데이터 값의 차이(Difference)와 특정 소스에서 누락된 데이터(Gaps)를 분석하는 인사이트를 제공합니다." },
+        { cat: "Insight", q: "Which value would be added to the CMDB for the Disk Space (GB) field of a Windows Server record using 'most reported' rule? (Tivoli: 75, ServiceNow: 75, LANDesk: 50, Altiris: 80)", a: ["80", "75", "50"], ans: 1, expl: "Windows Server 클래스가 'most reported' 규칙을 사용할 때, 두 군데 소스에서 보고된 75 GB가 가장 신뢰할 수 있는 값으로 선택됩니다." },
+        { cat: "Insight", q: "How can a Configuration Manager get a health score for regionally relevant CIs on the CMDB Health Dashboard?", a: ["Customize scheduled jobs", "Create CMDB groups with type, health, by region", "On the health settings, activate: Group scores by region"], ans: 1, expl: "지역별(Regional) 인사이트를 얻기 위해서는 해당 지역의 CI들을 'CMDB Group'으로 묶어 헬스 점수를 확인하는 것이 권장되는 방법입니다." },
+        { cat: "Insight", q: "Which tool available within the CMDB Workspace provides a modern visualization of how CIs are connected to each other?", a: ["Business Service Map", "Unified Map", "Relationship Map"], ans: 1, expl: "Unified Map은 CMDB Workspace 내에서 CI 간의 연결 관계를 시각적으로 분석할 수 있는 현대적인 도구입니다." },
+        { cat: "Insight", q: "What are the benefits of using the CMDB Data Foundations Dashboard? (Choose 2)", a: ["Uses automation to remediate potential risks", "Has a framework to create custom metrics", "Checks that important data is valid and properly configured", "Provides playbooks to assist in remediation"], ans: [2, 3], expl: "데이터가 유효하고 올바르게 구성되었는지 확인하며, 발견된 문제를 해결할 수 있는 가이드(Playbooks)를 제공합니다." },
+
+        // --- CATEGORY: Ingestion (5문항) ---
+        { cat: "Ingestion", q: "Which categories of Service Graph Connectors are available to provide integrations? (Choose 2)", a: ["Workflow Automation", "Observability", "DevOps", "Cloud"], ans: [1, 3], expl: "SGC는 Cloud(AWS, Azure 등)와 Observability(Monitoring 도구) 등 다양한 범주의 서드파티 통합을 지원합니다." },
+        { cat: "Ingestion", q: "Which tool provides the fastest time to value for effectively ingesting Windows computer data from SCCM?", a: ["IntegrationHub ETL", "Import set using JDBC", "SCCM Usage Metering Spoke", "SCCM Service Graph Connector"], ans: 3, expl: "Service Graph Connector는 사전 정의된 맵핑과 CSDM 표준을 제공하여 가장 빠르게 가치를 제공합니다." },
+        { cat: "Ingestion", q: "How can an Administrator prevent duplicate CI creation from import sets by leveraging the IRE?", a: ["Use the CMDBTransformUtil API in the transform script", "Create comparison rules in the IRE", "Set the system property to utilize the IRE", "Set the coalesce on two mappings"], ans: 0, expl: "표준 Import Set에서 IRE를 호출하려면 변환 스크립트 내에서 CMDBTransformUtil API를 사용해야 합니다." },
+        { cat: "Ingestion", q: "After installing the Service Graph Connector Central plugin, what workspace will host the new tab?", a: ["CMDB Workspace", "Service Graph Connector Workspace", "Discovery Admin Workspace"], ans: 1, expl: "SGC Central은 Service Graph Connector Workspace에서 통합 상태와 데이터 흐름을 관리합니다." },
+        { cat: "Ingestion", q: "Which method of ingesting third-party CIs into the CMDB minimizes the risk of technical debt?", a: ["Vendor-provided integration", "Import Sets and Transform Maps", "Table API", "Service Graph Connector"], ans: 3, expl: "SGC는 ServiceNow가 인증한 표준 방식을 따르므로 커스텀 스크립트로 인한 기술 부채를 최소화합니다." },
+
+        // --- CATEGORY: Governance (6문항) ---
+        { cat: "Governance", q: "What actions does the CMDB team take to resolve duplicate records and classification inconsistencies? (Choose 2)", a: ["Implement identification and reconciliation rules", "Allow source-defined CI classes", "Use CI Class Manager to establish standardized classes", "Create a custom script"], ans: [0, 2], expl: "IRE 규칙을 통해 중복을 방지하고, CI Class Manager로 표준화된 클래스 모델을 구축하는 것이 거버넌스의 핵심입니다." },
+        { cat: "Governance", q: "What is a consequence of making customizations to Service Graph Connector (SGC) mappings?", a: ["Customized mappings are not supported by ServiceNow", "Fields will have a special tag", "Customization prevents execution without approval"], ans: 0, expl: "표준 매핑을 수정하면 ServiceNow 기술 지원을 받을 수 없으며, 고객이 유지보수 책임을 지게 됩니다." },
+        { cat: "Governance", q: "Which policy type should be created to remove records while retaining restoration ability for a period?", a: ["Archive", "Retire", "Certification", "Delete"], ans: 0, expl: "Archive 정책은 데이터를 별도 테이블로 옮겨 보관하며, 필요 시 복구가 가능하게 합니다." },
+        { cat: "Governance", q: "Which feature can the group utilize to filter specific CI classes displayed on the Health Dashboard?", a: ["Data Refresh Rules", "Identification Rules", "Reconciliation Rules", "Health Inclusion Rules"], ans: 3, expl: "Health Inclusion Rules를 통해 관리 대상이 아닌 클래스를 대시보드 계산에서 제외할 수 있습니다." },
+        { cat: "Governance", q: "Which shows the most complete list of policy types provided by the CMDB Data Manager?", a: ["Delete, Attestation, Retire, Certification", "Attestation, Retire, Certification", "Retire, Archive, Attestation, Certification, and Delete", "Archive and Delete"], ans: 2, expl: "Data Manager는 Retire, Archive, Attestation, Certification, Delete 등 CI 생애주기 전반의 정책을 지원합니다." },
+        { cat: "Governance", q: "Where does a user review and manage tasks generated after configuring Data Manager policies?", a: ["Health Dashboard > Audit", "CMDB Workspace > Management", "CMDB Workspace > My Work", "Health Dashboard > Duplicate Cls"], ans: 2, expl: "정책에 의해 생성된 태스크는 CMDB Workspace의 'My Work' 탭에서 처리합니다." },
+
+        // --- CATEGORY: Config (8문항) ---
+        { cat: "Config", q: "Which CI Class Manager feature helps a Class Owner streamline the task of managing specific classes?", a: ["CI Favorites", "Pinned Classes", "Search CI Classes"], ans: 1, expl: "Pinned Classes 기능을 통해 자주 관리하는 클래스로 즉시 이동하여 설정을 관리할 수 있습니다." },
+        { cat: "Config", q: "In the CI Class Manager Basic Info tab, how can a class be set as a Principal Class?", a: ["Select 'Yes' from choice list", "Check the Principal Class check box", "Click the UI Action button"], ans: 1, expl: "Basic Info 섹션에 있는 전용 체크박스를 선택하여 간단하게 설정할 수 있습니다." },
+        { cat: "Config", q: "Which attributes are used by the Duplicate CI Remediator to identify the Main CI?", a: ["Least Related Items", "Most Related Items", "Newest Created", "Oldest Created"], ans: 1, expl: "가장 많은 관계를 가진 CI를 메인으로 삼아 데이터 유실을 최소화하고 무결성을 유지합니다." },
+        { cat: "Config", q: "Which is the best criterion attribute for an identification rule identifying multiple installations of the same app?", a: ["Configuration File Name", "Version", "Class", "Configuration File Path", "Port"], ans: 3, expl: "설치 경로(Path)는 동일 서버 내의 서로 다른 설치 위치를 구분하는 가장 유효한 식별자입니다." },
+        { cat: "Config", q: "What must the Administrator do to start utilizing the CMDB Health Dashboard KPIs?", a: ["Nothing, default", "Activate the dashboard scheduled jobs", "Download from Store", "Activate system property"], ans: 1, expl: "대시보드 데이터를 계산하는 백그라운드 스케줄 잡을 활성화해야 수치가 표시됩니다." },
+        { cat: "Config", q: "Which roles are needed to add or remove classes from the Principal Class filter? (Choose 2)", a: ["sn_cmdb_admin", "personalize_dictionary", "cmdb_query_builder", "sn_csdm_admin"], ans: [0, 1], expl: "CMDB 관리 권한과 해당 필드의 속성을 수정할 수 있는 Dictionary 권한이 모두 필요합니다." },
+        { cat: "Config", q: "Which CI Class Manager tab can the owner use to change the icon for the UNIX Server class?", a: ["Suggested Relationships", "Basic Info", "CI List", "Attributes"], ans: 1, expl: "아이콘과 같은 클래스의 기본 시각적 속성은 Basic Info 탭에서 관리합니다." },
+        { cat: "Config", q: "Which feature must be enabled to leverage dynamic reconciliation rules?", a: ["CMDB 360/Multisource CMDB", "CMDB Data Manager", "CMDB Workspace", "Reconciliation Rules"], ans: 0, expl: "다중 소스 환경에서의 동적 조정 규칙은 CMDB 360 기능이 활성화되어야 사용 가능합니다." },
+
+        // --- CATEGORY: CSDM (8문항) ---
+        { cat: "CSDM", q: "Which CSDM relationships are leveraged using the Data Foundations Dashboard playbooks?", a: ["Business Applications to Application Services", "Business Applications to Information Objects", "Locations to parent records", "Logical Cls to Information Objects"], ans: 0, expl: "CSDM의 핵심인 비즈니스 애플리케이션과 애플리케이션 서비스 간의 관계가 가장 우선적으로 검증됩니다." },
+        { cat: "CSDM", q: "Which solutions automatically create relationships between CI Applications in an Application Service? (Choose 2)", a: ["IntegrationHub ETL", "Service Mapping", "Event Management", "Discovery", "Data Manager"], ans: [1, 3], expl: "Service Mapping과 Discovery는 서비스 구조 내의 애플리케이션 간 관계를 자동으로 생성합니다." },
+        { cat: "CSDM", q: "Who is involved in adding CSDM design and planning (design) domain components into the CMDB? (Choose 2)", a: ["Enterprise Architect", "Business Relationship Manager", "Application Service Owner", "Application Owner"], ans: [0, 1], expl: "디자인 영역은 주로 EA와 BRM이 비즈니스 요구사항과 아키텍처를 정의하며 참여합니다." },
+        { cat: "CSDM", q: "Which actions can a CMDB Administrator take to improve CMDB Health based on the Data Foundations Dashboard? (Choose 2)", a: ["Focus on Critical and High metrics", "Remove retired Cls", "Adjust exclusion rules", "Use the Remediation Playbooks"], ans: [0, 3], expl: "우선순위가 높은 메트릭에 집중하고 제공된 해결 가이드(Playbooks)를 따르는 것이 권장됩니다." },
+        { cat: "CSDM", q: "What provides a structured approach to address gaps like missing serial numbers for hardware CIs?", a: ["CMDB Data Foundation Playbook", "Service Graph Connectors", "CI Class Manager"], ans: 0, expl: "Data Foundation Playbook은 특정 속성 누락과 같은 품질 격차를 식별하고 해결하는 구조화된 절차를 제공합니다." },
+        { cat: "CSDM", q: "Which are CMDB Data Manager end of life policy types? (Choose 2)", a: ["Lost", "Decommission", "Archive", "Disposed", "Retire"], ans: [2, 4], expl: "데이터 매니저의 공식 생애주기 종료 정책은 Archive와 Retire입니다." },
+        { cat: "CSDM", q: "In which lifecycle state would servers be affected by Data Manager delete and archive policies?", a: ["End of Life - Retired", "In any lifecycle state", "Missing-Stolen", "Inventory - Available"], ans: 0, expl: "안전을 위해 보통 'Retired' 상태의 CI만 자동 삭제 및 보관 정책의 대상이 됩니다." },
+        { cat: "CSDM", q: "Which steps build a Query Builder query for app services with incidents and related infrastructure? (Choose 2)", a: ["Add a non-CMDB table to the query", "Use Service Mapping Query for incidents", "Use CMDB Query for related infrastructure", "Use Service Mapping for non-CMDB tables"], ans: [0, 2], expl: "비-CMDB 테이블(Incident) 추가 및 인프라 관계를 탐색하는 쿼리를 조합해야 합니다." }
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 45 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+    let isExamStarted = false;
+
+    window.onload = function() { loadState(); };
+
+    window.addEventListener('keydown', (e) => {
+        if (!isExamStarted) return;
+        const key = parseInt(e.key);
+        if (key >= 1 && key <= 9) {
+            const oi = key - 1;
+            const q = questions[currentQ];
+            if (oi < q.a.length) toggleOpt(currentQ, oi);
+        }
+        if (e.key === 'ArrowLeft') move(-1);
+        if (e.key === 'ArrowRight') move(1);
+    });
+
+    function saveState() {
+        const state = { currentQ, timeLeft, userAnswers, isExamStarted };
+        sessionStorage.setItem('df_exam_state', JSON.stringify(state));
+    }
+
+    function loadState() {
+        const saved = sessionStorage.getItem('df_exam_state');
+        if (saved) {
+            const state = JSON.parse(saved);
+            currentQ = state.currentQ;
+            timeLeft = state.timeLeft;
+            userAnswers = state.userAnswers;
+            isExamStarted = state.isExamStarted;
+            if (isExamStarted) {
+                document.getElementById('intro').style.display = 'none';
+                document.getElementById('exam-ui').style.display = 'block';
+                renderQuestions();
+                showQuestion(currentQ);
+                startTimer();
+                refreshSelectedUI();
+            }
+        }
+    }
+
+    function startExam() {
+        isExamStarted = true;
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+        saveState();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const isMulti = Array.isArray(q.ans);
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-meta">${q.cat.toUpperCase()}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                ${isMulti ? `<span class="multi-hint">● 중복 선택 (Select ${q.ans.length})</span>` : ''}
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => {
+                        const type = isMulti ? 'checkbox' : 'radio';
+                        return `
+                        <label id="label-${i}-${oi}">
+                            <input type="${type}" name="opt-${i}" value="${oi}" onchange="toggleOpt(${i}, ${oi})">
+                            <span class="opt-num">${oi+1}</span>
+                            <span>${opt}</span>
+                        </label>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function toggleOpt(qi, oi) {
+        const q = questions[qi];
+        const isMulti = Array.isArray(q.ans);
+        const targetCount = isMulti ? q.ans.length : 1;
+
+        if (isMulti) {
+            if (!userAnswers[qi]) userAnswers[qi] = [];
+            const idx = userAnswers[qi].indexOf(oi);
+            if (idx > -1) userAnswers[qi].splice(idx, 1);
+            else userAnswers[qi].push(oi);
+            refreshSelectedUI(qi);
+            saveState();
+            if (userAnswers[qi].length === targetCount) {
+                setTimeout(() => { if (qi < questions.length - 1) move(1); }, 500);
+            }
+        } else {
+            userAnswers[qi] = [oi];
+            refreshSelectedUI(qi);
+            saveState();
+            setTimeout(() => { if (qi < questions.length - 1) move(1); }, 400);
+        }
+    }
+
+    function refreshSelectedUI(qi = null) {
+        const updateCard = (idx) => {
+            const labels = document.querySelectorAll(`#q-${idx} label`);
+            labels.forEach(l => l.classList.remove('selected'));
+            const answers = userAnswers[idx];
+            if (answers && Array.isArray(answers)) {
+                answers.forEach(oi => {
+                    const target = document.getElementById(`label-${idx}-${oi}`);
+                    if (target) {
+                        target.classList.add('selected');
+                        target.querySelector('input').checked = true;
+                    }
+                });
+            }
+        };
+        if (qi !== null) updateCard(qi);
+        else questions.forEach((_, i) => updateCard(i));
+    }
+
+    function showQuestion(idx) {
+        if(idx < 0 || idx >= questions.length) return;
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        prevBtn.style.visibility = (idx === 0) ? 'hidden' : 'visible';
+        nextBtn.style.visibility = (idx === questions.length - 1) ? 'hidden' : 'visible';
+        saveState();
+    }
+
+    function move(dir) { showQuestion(currentQ + dir); }
+
+    function startTimer() {
+        if(timer) clearInterval(timer);
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) calculateResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        const unanswered = userAnswers.filter(ans => ans === null).length;
+        let confirmMsg = "제출하시겠습니까?";
+        if (unanswered > 0) confirmMsg = `풀지 않은 문제가 ${unanswered}개 있습니다.\n정말 제출하시겠습니까?`;
+        if (confirm(confirmMsg)) calculateResult();
+    }
+
+    function calculateResult() {
+        clearInterval(timer);
+        isExamStarted = false;
+        sessionStorage.removeItem('df_exam_state');
+
+        let correctCount = 0;
+        let catStats = {}; 
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "";
+
+        questions.forEach((q, i) => {
+            if (!catStats[q.cat]) catStats[q.cat] = { correct: 0, total: 0 };
+            catStats[q.cat].total++;
+
+            const currentUserAns = userAnswers[i];
+            const userAnsStr = Array.isArray(currentUserAns) 
+                ? [...currentUserAns].sort().join(',') 
+                : (currentUserAns !== null ? currentUserAns.toString() : "");
+            
+            const targetAns = (Array.isArray(q.ans) ? q.ans : [q.ans]).sort().join(',');
+            const isCorrect = userAnsStr === targetAns;
+
+            if(isCorrect) {
+                correctCount++;
+                catStats[q.cat].correct++;
+            }
+
+            const reviewItem = document.createElement('div');
+            reviewItem.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            let userPicks = currentUserAns !== null ? (Array.isArray(currentUserAns) ? currentUserAns : [currentUserAns]).map(idx => q.a[idx]).join(', ') : "";
+            const correctAnss = (Array.isArray(q.ans) ? q.ans : [q.ans]).map(idx => q.a[idx]).join(', ');
+            
+            reviewItem.innerHTML = `
+                <div class="review-q">Q${i+1}. ${q.q}</div>
+                <div class="review-ans">
+                    Your Answer: <span class="${isCorrect ? 'txt-correct' : 'txt-wrong'}">${userPicks}</span><br>
+                    Correct Answer: <span class="txt-correct">${correctAnss}</span>
+                </div>
+                <div class="review-expl"><strong>해설:</strong> ${q.expl}</div>
+            `;
+            reviewContainer.appendChild(reviewItem);
+        });
+
+        const overallScore = Math.round((correctCount / questions.length) * 100);
+        let hasCategoryFailure = false;
+        let reportHtml = "<h3>섹션별 결과</h3>";
+
+        for (let catName in catStats) {
+            const stat = catStats[catName];
+            const percent = Math.round((stat.correct / stat.total) * 100);
+            if (percent < 50) hasCategoryFailure = true;
+            reportHtml += `<div style="margin-bottom: 10px; border-bottom: 1px dashed #ddd; padding-bottom: 5px;"><strong>${catName}</strong>: ${percent}% (${stat.correct}/${stat.total})</div>`;
+        }
+
+        let statusClass = (overallScore >= 70 && !hasCategoryFailure) ? "pass" : "fail";
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        window.scrollTo(0, 0);
+
+        const circle = document.getElementById('res-score');
+        circle.innerText = overallScore + "%";
+        circle.className = `score-circle ${statusClass}`;
+        document.getElementById('res-status').innerText = statusClass === "pass" ? "PASSED (합격)" : "FAILED (불합격)";
+        document.getElementById('res-detail').innerHTML = reportHtml;
+    }
+
+    function resetExam() {
+        sessionStorage.removeItem('df_exam_state');
+        location.reload();
+    }
+</script>
+</body>
+</html>

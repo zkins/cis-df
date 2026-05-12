@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        { cat: "Insight", q: "Which of the following tools and features belongs to the 'Insight' pillar of the CMDB?", a: ["ServiceNow Discovery and Service Mapping", "CI Class Manager and CMDB Data Manager", "CMDB Query Builder, Unified Map, and Intelligent Search", "Duplicate CI Remediator and De-duplication Templates"], ans: 2 },
+        { cat: "Insight", q: "The 'Govern' pillar of CMDB tools is supported by which of the following?", a: ["Agent Client Collector", "CI Class Manager and CMDB Health Dashboard", "Service Graph Connectors", "CMDB and CSDM Data Foundations Dashboard"], ans: 1 },
+        { cat: "Configuration", q: "When a dynamic reconciliation rule for RAM is created with the rule type 'Largest Value', what value is updated in the CMDB?", a: ["The value most frequently reported across all data sources", "The highest numeric value reported among all data sources", "The most recent value inserted", "The value provided by ServiceNow Discovery only"], ans: 1 },
+        { cat: "Ingestion", q: "Because ServiceNow Discovery probes devices without requiring permanent software installation, it is often referred to as what?", a: ["Real-time discovery", "Vertical discovery", "Agentless discovery", "Top-down discovery"], ans: 2 },
+        { cat: "Ingestion", q: "In addition to 'Horizontal discovery' and 'Agentless discovery', what is another term used to refer to ServiceNow Discovery?", a: ["IP-based discovery", "Cloud-native discovery", "On-demand discovery", "Virtual discovery"], ans: 0 },
+        { cat: "Configuration", q: "What happens to all the collected data sent by ServiceNow Discovery to avoid duplicate records in the CMDB?", a: ["It is directly written into the CMDB tables.", "It is placed in an Import Set for manual review.", "It is sent to the IRE (Identification and Reconciliation Engine) for processing.", "It is processed by the CMDB Query Builder."], ans: 2 },
+        { cat: "Ingestion", q: "During the Scan Phase of ServiceNow Discovery, what action is performed?", a: ["It uses probes and sensors to determine the device type.", "It performs a sweep of IP addresses or ranges to detect live hosts.", "It gathers identifying attributes such as serial numbers or MAC addresses.", "It collects detailed data like running processes and network interfaces."], ans: 1 },
+        { cat: "Ingestion", q: "Detailed information such as installed software, hardware configurations, and running processes are collected during which Discovery phase?", a: ["Scan Phase", "Classification Phase", "Identification Phase", "Exploration Phase"], ans: 3 },
+        { cat: "Ingestion", q: "Why does the ServiceNow MID Server operate within an organization's trusted network environment?", a: ["To process real-time monitoring alerts", "To ensure that sensitive data and credentials never leave the organization's boundaries", "To run CMDB health dashboards internally", "To avoid paying for external discovery licenses"], ans: 1 },
+        { cat: "Ingestion", q: "How does the MID Server securely transmit data between itself and the ServiceNow instance?", a: ["Using unsecured HTTP", "Through manual data imports", "Using encrypted communication via HTTPS (Port 443)", "By storing data on a local flash drive"], ans: 2 },
+        { cat: "Ingestion", q: "What protocol does the MID Server use to discover Windows machines without permanent software?", a: ["SSH", "WMI", "SNMP", "REST API"], ans: 1 },
+        { cat: "Ingestion", q: "To collect data from network switches or printers, the MID Server typically employs which protocol?", a: ["WMI", "WinRM", "SNMP", "SSH"], ans: 2 },
+        { cat: "Ingestion", q: "What serves as a central hub giving administrators real-time visibility into daily Discovery activities and schedule management?", a: ["CI Class Manager", "Discovery Admin Workspace", "IntegrationHub ETL", "Multisource CMDB"], ans: 1 },
+        { cat: "Ingestion", q: "AWS, Azure, and Google Cloud are classified as what type of discoverable data by ServiceNow Discovery?", a: ["Hardware details", "Software details", "Network details", "Cloud resources"], ans: 3 },
+        { cat: "CSDM", q: "An Application Service is a unique instance of an application that can be created per which of the following boundaries?", a: ["Environment, Geographic region, or Line of Business", "IP Address range only", "CPU and Memory size", "The underlying operating system"], ans: 0 },
+        { cat: "CSDM", q: "Which application service type requires NO license and offers quick visualization but requires high touch to build out queries?", a: ["Service Mapping (Top-Down)", "Dynamic CI Group", "Tag-Based", "Agent Client Collector"], ans: 1 },
+        { cat: "CSDM", q: "What Application Service type provides a 'Medium touch' by building out categories and families, making it the best fit for resource stacks of cloud and containers?", a: ["Service Mapping", "Dynamic CI Group", "Tag-Based", "Operational CI"], ans: 2 },
+        { cat: "CSDM", q: "Implementing Service Mapping supports the CSDM framework by providing which of the following values?", a: ["Eliminating the need for the CMDB", "Accurate Service Modeling, Enhanced Data Quality, and Dependency Management", "Enabling unencrypted communication to the MID Server", "Overriding all Identification Rules"], ans: 1 },
+        { cat: "Ingestion", q: "ServiceNow Agent Client Collector (ACC) is a key enabler for which ITOM use cases?", a: ["Discovery of printers using SNMP", "Software Asset Management (SAM) and Security Incident Response", "Creating CMDB health dashboards", "Configuring Service Graph Connectors"], ans: 1 },
+        { cat: "Ingestion", q: "If an organization needs to discover workstations that intermittently connect to the network, which solution is best suited?", a: ["Horizontal Discovery via MID Server", "Agent Client Collector (ACC)", "Service Mapping", "IntegrationHub ETL"], ans: 1 },
+        { cat: "Ingestion", q: "What happens to imported data within IntegrationHub ETL to enhance data quality and minimize duplicates?", a: ["It is manually reviewed by the CMDB Data Manager.", "It is sent back to the data source.", "It is automatically processed through the Identification and Reconciliation Engine (IRE).", "It bypasses all CMDB rules."], ans: 2 },
+        { cat: "Ingestion", q: "ServiceNow Service Graph Connectors (e.g., for SCCM or Jamf) leverage what to prepare data for ingestion into the CMDB?", a: ["Discovery Schedules", "Custom Transform Scripts only", "IntegrationHub ETL transform maps", "Discovery Probes and Sensors"], ans: 2 },
+        { cat: "Ingestion", q: "In the IntegrationHub ETL process, which component uses data from staging tables and transform maps to generate payloads for the IRE?", a: ["The Target CMDB Table", "The Agent Client Collector", "The Robust Transform Engine (RTE)", "The MID Server"], ans: 2 },
+        { cat: "Ingestion", q: "In IntegrationHub ETL, if you use various REST endpoints for different types of data, how should they be configured?", a: ["They all share the same data source and transform map.", "Each REST endpoint is associated with its own data source and an ETL transform map.", "They bypass the IRE completely.", "They are converted into SNMP traps."], ans: 1 },
+        { cat: "Ingestion", q: "What is the first step when creating an ETL Transform Map in IntegrationHub ETL?", a: ["Run test integrations", "Configure reconciliation rules", "Provide Basic Details, such as the data source and import set", "Rollback imported data"], ans: 2 },
+        { cat: "Insight", q: "Which dashboard exposes key performance and error metrics for all installed Service Graph Connectors and custom integrations?", a: ["CMDB 360 Dashboard", "CI Class Manager Dashboard", "CMDB Integrations Dashboard", "CMDB Health Dashboard"], ans: 2 },
+        { cat: "Ingestion", q: "Which of the following is an example of a non-CMDB table supported by default for IntegrationHub ETL?", a: ["[cmdb_ci_server]", "[sys_user] and [cmn_location]", "[cmdb_ci_service_auto]", "[cmdb_ci_group]"], ans: 1 },
+        { cat: "Configuration", q: "To eliminate technical debt by removing a custom class, what is the recommended practice?", a: ["Delete the custom class directly from the dictionary.", "Utilize CI Class Manager to identify a baseline class, then move CIs to standard classes and map attributes correctly.", "Change the name of the custom class to match a standard class.", "Turn off the extensible flag for the custom class."], ans: 1 },
+        { cat: "Configuration", q: "In the CI Class Manager, which tab allows you to enable or disable the Extensible flag of a class?", a: ["Attributes tab", "Identification Rule tab", "Basic Info tab", "Reconciliation Rules tab"], ans: 2 },
+        { cat: "Configuration", q: "By flagging a class like 'Windows Servers' as a Principal Class, how does it streamline ITSM processes?", a: ["It automatically resolves server-related incidents.", "It ensures only relevant CIs appear when selecting a Configuration Item in records such as incidents or changes.", "It grants admin rights to the Managed By Group.", "It creates a dynamic CI group instantly."], ans: 1 },
+        { cat: "Configuration", q: "According to leading practices for building a CMDB, what is recommended regarding Principal Classes?", a: ["Flag all CMDB classes as Principal Classes immediately.", "Avoid using Principal Classes to prevent data loss.", "Begin with a simple approach and leverage the Principal Class feature to identify CIs necessary for defined use cases, making incremental improvements.", "Use them only for Cloud resources."], ans: 2 },
+        { cat: "Governance", q: "If the 'Managed By Group' is set in both the CI Class Manager and via a Technical Service Offering, which one takes precedence?", a: ["CI Class Manager", "They are merged together", "Technical Service Offering", "The field is left blank"], ans: 2 },
+        { cat: "Configuration", q: "Which configuration in the CI Class Manager helps in standardizing models associated with CIs, simplifying their management?", a: ["Icon", "Default Product Model", "Extensible flag", "Table Name"], ans: 1 },
+        { cat: "Configuration", q: "Identification rules use a set of defined attributes (Identifier Entries) to uniquely identify CIs. Which of the following can be used as these attributes?", a: ["Managed by Group, Assignment Group", "Name, Serial Number, Device ID, Object ID, Configuration file", "Discovery Schedule, MID Server Name", "Extensible Flag, Principal Class"], ans: 1 },
+        { cat: "Configuration", q: "Which key feature of Dependent Relationships helps in assessing the effect of changes or outages (e.g., seeing which apps are affected if a server goes down)?", a: ["Dependency Mapping", "Lifecycle Management", "Impact Analysis", "Suggested Relationships"], ans: 2 },
+        { cat: "Governance", q: "Which key feature of Dependent Relationships ensures that when a CI is decommissioned, it is appropriately handled for all dependent CIs?", a: ["Lifecycle Management", "Service Mapping", "Impact Analysis", "Principal Class filtering"], ans: 0 },
+        { cat: "Configuration", q: "'Provides Power for :: Receives Power From' and 'Runs on :: Hosts' are examples of what?", a: ["Identifier Entries", "Reconciliation Rules", "Suggested Relationships", "Extensible Flags"], ans: 2 },
+        { cat: "Configuration", q: "If an administrator does NOT use the CI Class Manager, what is the traditional method to configure tables, columns, and identification rules?", a: ["Using IntegrationHub ETL only", "Navigating to each respective application in the application navigator", "Writing background scripts for all changes", "Editing the Common Service Data Model directly"], ans: 1 },
+        { cat: "Governance", q: "When the IRE encounters duplicate CIs during ingestion, what can be used to review their origin and assist in the remediation process?", a: ["A Reclassification Task", "The CMDB Query Builder", "De-duplication tasks and the de-duplication wizard", "Agent Client Collector"], ans: 2 },
+        { cat: "Governance", q: "If a matched CI needs to be upgraded or downgraded to another CI class, but automatic reclassification is disabled, what does the system generate?", a: ["A De-duplication Task", "A Reclassification Task", "An Incident Record", "An Import Set error"], ans: 1 },
+        { cat: "Configuration", q: "How does the IRE prevent inconsistencies like duplicates or updates from unauthorized data sources?", a: ["Data sources write directly to the CMDB bypassing the IRE.", "It enforces sources to call a centralized set of APIs first before data is stored in the CMDB.", "It locks the CMDB during business hours.", "It requires manual approval for every single CI insert."], ans: 1 },
+        { cat: "Configuration", q: "Which of the following is a benefit of configuring Identification Rules?", a: ["Improved Data Quality and Efficiency by automating CI identification.", "Disabling the need for Discovery schedules.", "Allowing data sources to directly write to the CMDB.", "Automatically generating Principal Classes."], ans: 0 },
+        { cat: "Configuration", q: "If not using the CI Class Manager, from where can Identification rules be viewed or configured?", a: ["Under the CI Identifiers module in the left navigation pane", "The Agent Client Collector workspace", "The CMDB 360 Dashboard", "The Service Graph Connector settings"], ans: 0 },
+        { cat: "Configuration", q: "When configuring additional application identification rules, what is the recommended practice?", a: ["Use attributes that change frequently to keep data fresh.", "Create rules with the lowest priority for the strongest identifier entries.", "Create good rules set with the highest priority for the strongest identifier entries that do not change over time.", "Only use the application's unique serial number."], ans: 2 },
+        { cat: "Configuration", q: "Why is a unique serial number NOT considered a reliable identifier entry for software applications?", a: ["Because they are always encrypted.", "Software applications do not necessarily have a unique serial number; they are best identified by their individual running process.", "Only hardware devices can be stored in the CMDB.", "Because the MID Server cannot read serial numbers."], ans: 1 },
+        { cat: "Configuration", q: "What is the name of the system property used to enable the optional IRE condition?", a: ["glide.ire.block_inserts", "glide.identification_engine.enable_identifier_optional_condition", "glide.cmdb.principal_class", "glide.discovery.agentless"], ans: 1 },
+        { cat: "Configuration", q: "To completely block INSERTS from a specific unauthorized data source, what should a CMDB administrator configure?", a: ["CMDB Data Manager", "IRE Data Source Rules", "Data Refresh Rules", "Identifier Optional Conditions"], ans: 1 },
+        { cat: "Configuration", q: "Which rule allows you to define a time interval (e.g., 14 days) during which a class must be updated by a higher-priority source before allowing lower-priority sources to perform updates?", a: ["Reconciliation Rule", "Data Refresh Rule", "Identification Rule", "Reclassification Rule"], ans: 1 },
+        { cat: "Ingestion", q: "In Import Sets and Transform Maps, what is used to handle complex data transformations, calculations, or formatting?", a: ["Field Mappings", "Data Staging Tables", "Transform Scripts", "CMDB Query Builder"], ans: 2 },
+        { cat: "Ingestion", q: "Does using the classic 'Import Sets and Transform Maps' method from the System Import Sets application require a paid license?", a: ["Yes, it requires an ITOM Visibility license.", "Yes, it requires an IntegrationHub Professional license.", "No, it is accessible without a paid license.", "No, but it only works for Non-CMDB tables."], ans: 2 }
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>

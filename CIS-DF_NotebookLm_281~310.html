@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            cat: "Ingestion",
+            q: "[Style A: Scenario] A highly secure financial organization has a network segment where the security team explicitly denies any external discovery solutions from making remote connections. What is the BEST ServiceNow tool to perform discovery and real-time monitoring in this restricted environment?",
+            a: ["Service Mapping (Top-Down)", "ServiceNow Horizontal Discovery via MID Server", "Agent Client Collector (ACC)", "IntegrationHub ETL"],
+            ans: 2,
+            expl: "ACC is a single agent and a key enabler for the discovery of devices in a secure network where the security team does not want external discovery solutions to remotely connect to them."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style C: Constraints] A customer expects ServiceNow Discovery to instantly reflect changes the moment a server is spun up. Is ServiceNow Discovery considered a true real-time discovery solution?",
+            a: ["Yes, it operates in real-time as long as the MID Server is running.", "No, it is schedule-based; for true real-time discovery, the Agent Client Collector (ACC) must be used.", "Yes, provided the 'real-time' flag is checked in the Discovery Schedule.", "No, it requires manual triggers from a CMDB Administrator."],
+            ans: 1,
+            expl: "ServiceNow Discovery is schedule-based; therefore, it is not considered a real-time discovery solution. For true real-time discovery, ServiceNow offers Agent Client Collector."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style B: Sequence] ServiceNow Discovery operates systematically through specific phases. Which of the following represents the correct sequence of these phases?",
+            a: ["Classification Phase → Scan Phase → Exploration Phase → Identification Phase", "Scan Phase → Identification Phase → Classification Phase → Exploration Phase", "Scan Phase → Classification Phase → Identification Phase → Exploration Phase", "Identification Phase → Classification Phase → Scan Phase → Exploration Phase"],
+            ans: 2,
+            expl: "The Discovery phases occur in the following order: 1. Scan Phase, 2. Classification Phase, 3. Identification Phase, 4. Exploration Phase."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style C: Constraints] Because ServiceNow Discovery is agentless, the MID Server must probe devices using appropriate protocols without permanent software. Which protocol is strictly used by the MID Server to discover Unix or Linux computers?",
+            a: ["WMI", "SNMP", "SSH", "WinRM"],
+            ans: 2,
+            expl: "The MID Server uses WMI for Windows, SSH for Unix/Linux, and SNMP for network devices/printers."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style A: Scenario] An organization needs to map application services for their modern, cloud-native containerized environments. They desire a 'medium touch' approach that allows quick visualization by building out specific categories and families. Which Application Service type is the best fit?",
+            a: ["Dynamic CI Group", "Tag-Based", "Service Mapping (Top-Down)", "Manual Mapping"],
+            ans: 1,
+            expl: "Tag-based mapping is the best fit for cloud-native or Containers-based environments, offering quick visualization and a medium touch."
+        },
+        {
+            cat: "Licensing",
+            q: "[Style C: Constraints] When configuring a 'Dynamic CI Group' to easily group small application services using CI list filters or CMDB queries, which of the following licensing constraints applies?",
+            a: ["It requires an ITOM Visibility license.", "It requires an ITOM Health license.", "It requires an IntegrationHub Professional license.", "No license is required."],
+            ans: 3,
+            expl: "Dynamic CI Group mapping is the best fit for small application services... and No License is Required."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] All application services are essentially operational CIs that represent a unique instance of a deployed system. In which parent class (or its sub-classes) are Application Services stored within the CMDB?",
+            a: ["[cmdb_ci_appl]", "[cmdb_ci_service_auto]", "[cmdb_ci_server]", "[cmdb_ci_dynamic_group]"],
+            ans: 1,
+            expl: "Application Services are stored in the Application Service parent class [cmdb_ci_service_auto] or one of its sub-classes."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] According to the CSDM 5.0 conceptual model, in which domain does the 'Business Capability' component reside?",
+            a: ["Foundation", "Build & Integration", "Design & Planning", "Service Delivery"],
+            ans: 2,
+            expl: "In the CSDM 5 diagram, Business Capability is located within the Design & Planning domain."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style A: Scenario] Implementing Service Mapping provides significant alignment with the CSDM framework. When communicating the business value of Service Mapping to a stakeholder, what three primary benefits should be highlighted?",
+            a: ["Automated De-duplication, Health Scorecards, and Lifecycle Management.", "Accurate Service Modeling, Enhanced Data Quality, and Dependency Management.", "Real-time Discovery, Manual Workflows, and Unencrypted APIs.", "IntegrationHub Automation, Service Builder Guides, and IRE APIs."],
+            ans: 1,
+            expl: "CSDM value received from implementing Service Mapping includes Accurate Service Modeling, Enhanced Data Quality, and Dependency Management."
+        },
+        {
+            cat: "Licensing",
+            q: "[Style C: Constraints] ITOM visibility licensing is generally required to use Service Graph Connectors that leverage the IRE. However, one specific connector is granted an exception. Which Service Graph Connector does NOT require an ITOM visibility license?",
+            a: ["AWS", "Azure", "SCCM", "Jamf"],
+            ans: 2,
+            expl: "ITOM visibility licensing is required to use Service Graph connectors that leverage the IRE with the exception of SCCM."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style B: Sequence] During the IntegrationHub ETL process, data must pass through several stages before being written to the CMDB. What acts as the bridge that uses data from staging tables (Import Sets) along with ETL transform maps to generate payloads for the IRE?",
+            a: ["MID Server", "Agent Client Collector", "Robust Transform Engine (RTE)", "CI Class Manager"],
+            ans: 2,
+            expl: "The RTE uses the data from staging tables, along with ETL transform maps created within IntegrationHub ETL, to generate IRE payloads."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style A: Scenario] A CMDB administrator is setting up a new Service Graph Connector for Microsoft Intune. They need to preview the incoming data and adjust the field mappings before ingestion into the CMDB. What application should they use?",
+            a: ["IntegrationHub ETL", "Duplicate CI Remediation Wizard", "System Import Sets (Classic)", "CMDB 360 Dashboard"],
+            ans: 0,
+            expl: "Service Graph Connectors leverage IntegrationHub ETL transform maps... A CMDB administrator can preview and adjust mappings using IntegrationHub ETL."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style C: Constraints] IntegrationHub ETL includes advanced functionality that allows data ingestion into certain non-CMDB tables (e.g., cmn_location, sys_user). Which system property specifies the list of these supported non-CMDB tables?",
+            a: ["glide.ire.allow_null_attributes", "glide.identification_engine.enable_identifier_optional_condition", "glide.cmdb.data_refresh_rules", "glide.identification_engine.non_cmdb_tables"],
+            ans: 3,
+            expl: "A list of non-CMDB tables supported by default are specified in the system property glide.identification_engine.non_cmdb_tables."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style B: Sequence] When an organization uses classic 'Import Sets and Transform Maps' to bring asset data from a spreadsheet into ServiceNow target tables, what is the recommended sequence of the CMDB Import Process?",
+            a: ["Confirm import data → Review source data → Build transform maps.", "Build transform maps → Run Discovery → Cleanse data.", "Review source data and target table requirements → Build transform maps and define order → Confirm import data and relationships.", "Run Transform → Specify Basic Details → Map to CMDB."],
+            ans: 2,
+            expl: "The CMDB Import Process follows this sequence: 1. Review source data. 2. Build transform maps. 3. Confirm import data."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style A: Scenario] During an import process via a transform map, a mandatory value is NOT provided in the source Excel file for a target CMDB field. What is the recommended method to resolve this and populate the mandatory field?",
+            a: ["Run a horizontal discovery scan manually.", "A script can be created in the transform map to set certain target fields to the needed value.", "Bypass the Identification and Reconciliation Engine (IRE).", "Manually enter the data directly into the CMDB after the import fails."],
+            ans: 1,
+            expl: "In some cases, a script can be created in the transform map to set certain target fields to the value needed if it's missing in the source."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style C: Constraints] An administrator configures an onBefore script in a classic transform map to invoke the CMDBTransformUtil API, utilizing the IRE. What happens to any 'coalesce' values previously defined in the transform map?",
+            a: ["They trigger a reclassification task if mismatches occur.", "They act as the primary identification rule.", "They are automatically converted into Data Refresh Rules.", "They are ignored and therefore are not technically required."],
+            ans: 3,
+            expl: "When the CMDBTransformUtil API is invoked during the import process, any coalesce values defined in the transform map are ignored."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style B: Sequence] In the CI Class Manager, an administrator needs to configure whether a class can be extended into a new child class. Under which tab is the 'Extensible flag' located?",
+            a: ["Health Tab", "Attributes Tab", "Basic Info Tab", "Identification Rule Tab"],
+            ans: 2,
+            expl: "The Basic Info tab provides essential details about a CI class, allowing you to configure the Display Name and the Extensible flag."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style A: Scenario] IT Service Desk personnel complain that the 'Configuration Item' reference field on incident records contains thousands of irrelevant sub-components, confusing the selection process. What is the BEST practice to streamline this and ensure only relevant CIs appear?",
+            a: ["Flag relevant hardware classes (e.g., 'Windows Servers') as a 'Principal Class' in the CI Class Manager.", "Delete all classes except for standard computer records.", "Write a client script to hide the field entirely.", "Use CMDB Data Manager to archive unneeded sub-components."],
+            ans: 0,
+            expl: "Marking a class as a Principal Class helps streamline ITSM processes by filtering the CIs that appear in the reference field."
+        },
+        {
+            cat: "Governance",
+            q: "[Style A: Scenario] A CMDB administrator wants to configure the 'Managed By Group' for a set of Linux servers. The servers are associated with a Technology Management Offering that designates 'Linux Support' as the group. At the same time, the [cmdb_ci_linux_server] class in the CI Class Manager specifies 'Infrastructure Team' as the group. Which group value takes precedence and will be populated on the CI?",
+            a: ["'Infrastructure Team', because CI Class Manager settings always take Priority 1.", "'Linux Support', because Technology Management Offering values take Priority 1 precedence over CI Class Manager settings.", "The field will remain empty until the conflict is manually resolved.", "Both groups will be combined into a Dynamic CI Group."],
+            ans: 1,
+            expl: "Managed By Group value from the corresponding Technology Management Offering (Priority 1) takes precedence over the CI Class Manager (Priority 2)."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style B: Sequence] The Identification process within the Identification and Reconciliation Engine (IRE) flows in a systematic order. What are the key stages of this identification flow before a CI is updated or created?",
+            a: ["Data Ingestion → Duplicate Prevention → Attribute Matching.", "Duplicate Prevention → Data Ingestion → Attribute Matching.", "Attribute Matching → Duplicate Prevention → Data Ingestion.", "Data Ingestion → Attribute Matching → Duplicate Prevention."],
+            ans: 3,
+            expl: "The identification process flows through: Data Ingestion, Attribute Matching, and Duplicate Prevention."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style C: Constraints] While configuring Identification Rules, an administrator encounters the 'Allow null attribute' option. If this option is set to FALSE, what does it mean for the rule?",
+            a: ["Null attributes are automatically converted to a default generic string.", "All criterion attributes must have values to attempt matching with an identifier entry.", "The rule will trigger a de-duplication task automatically.", "The IRE will process the matching step without considering priority."],
+            ans: 1,
+            expl: "Allow null attribute when set to false means all criterion attributes must have values to attempt matching with an identifier entry."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style A: Scenario] An organization relies heavily on a CI class that currently lacks proper identification rules. Because the existing identifier entries change over time, the IRE fails to represent the unique identity of the CIs. The opposite of a duplicate issue occurs: multiple unique CIs in reality are identified as the exact SAME CI in the database, meaning one CI is updated continuously when several should have been created. What is this phenomenon called?",
+            a: ["Missing CIs", "Overloaded CIs", "Stale CIs", "Orphaned CIs"],
+            ans: 1,
+            expl: "Overloaded CIs occur when different real-world CIs are identified as the same CI record in the CMDB."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style C: Constraints] To utilize 'Optional IRE Conditions' for more advanced identification matching logic, a specific system property must be modified in the platform. What is the name of this system property?",
+            a: ["glide.cmdb.principal_class", "glide.ire.allow_null_attributes", "glide.identification_engine.enable_identifier_optional_condition", "glide.identification_engine.non_cmdb_tables"],
+            ans: 2,
+            expl: "The Optional IRE Condition System Property that must be set to 'true' is glide.identification_engine.enable_identifier_optional_condition."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style A: Scenario] A company uses ServiceNow Discovery (high priority) and an SCCM integration (lower priority). Reconciliation rules prevent SCCM from overwriting Discovery updates. However, the CMDB administrator decides that SCCM should be completely blocked from even inserting NEW records into a specific class. What configuration should they use?",
+            a: ["Run a De-duplication Template.", "Set the Principal Class flag on the specific class.", "Configure IRE Data Source Rules.", "Configure Data Refresh Rules."],
+            ans: 2,
+            expl: "To further refine control and block inserts from a specific data source, a CMDB administrator can configure IRE Data Source Rules."
+        },
+        {
+            cat: "Health",
+            q: "[Style C: Constraints] A new CMDB administrator is eager to view the overall health of their CMDB using the CMDB Health Dashboard. They open the dashboard but notice all scorecards (Completeness, Correctness, Compliance) read '0%'. According to additional considerations, what must be done to populate these scorecards?",
+            a: ["Run an Attestation Policy.", "Enable the Extensible flag on all relevant classes.", "The CMDB Health Dashboard scheduled jobs are not turned on by default and must be activated.", "Upgrade the ITOM Visibility license."],
+            ans: 2,
+            expl: "CMDB Health Dashboard scheduled jobs used to populate the various scorecards are not turned on by default and must be activated."
+        },
+        {
+            cat: "Governance",
+            q: "[Style D: CSDM Model / Governance] The CMDB Data Manager provides several powerful lifecycle policies. If an organization wants to automate the creation of tasks requiring team members to verify the actual, physical existence of IT infrastructure and applications on a regular basis, which specific policy should be configured?",
+            a: ["Retire, Archive, and Delete Policies", "Data Certification Policies", "De-duplication Templates", "Attestation Policies"],
+            ans: 3,
+            expl: "Attestation Policies: Automated task creation to check for the physical existence of IT infrastructure and applications."
+        },
+        {
+            cat: "Licensing",
+            q: "[Style C: Constraints] When identifying duplicate CIs, administrators can utilize the Duplicate CI Remediation Wizard. Does this specific wizard feature require a premium ITOM license to operate?",
+            a: ["Yes, ITOM Visibility is strictly required.", "Yes, ITOM Health is strictly required.", "No, it is part of a base instance accessible from the CMDB Workspace under the Management tab.", "No, but it is a paid plugin downloaded from the ServiceNow Store."],
+            ans: 2,
+            expl: "The Duplicate CI Remediation Wizard is part of the base instance and does not require a paid license."
+        },
+        {
+            cat: "Governance",
+            q: "[Style A: Scenario] The CMDB team faces thousands of duplicate Server records. Rather than resolving them one by one using the manual wizard, they want to automatically merge duplicate records by combining relevant information into a single CI based on specific rules. What is the most appropriate ServiceNow tool to accomplish this?",
+            a: ["Identification and Reconciliation API", "De-Duplication Templates", "Data Refresh Rules", "CMDB 360 Multisource CI Reclassification"],
+            ans: 1,
+            expl: "De-duplication Templates provide the ability to automatically merge duplicate records on a scheduled basis."
+        },
+        {
+            cat: "Insight",
+            q: "[Style A: Scenario] An organization imports data from three different tools: ServiceNow Discovery, SCCM, and an external vendor API. Occasionally, there are discrepancies regarding a specific CI attribute. The CMDB administrator wants to visually track the complete history of which tool reported which proposed value over time. Which feature directly solves this use case?",
+            a: ["CMDB 360 / Multisource CMDB", "Duplicate CI Remediation Wizard", "Unified Map", "IntegrationHub ETL Dashboard"],
+            ans: 0,
+            expl: "CMDB 360/Multisource CMDB retains complete history about discovery sources and proposed values involved in updates of CI attributes."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] According to the CSDM 5.0 conceptual diagram, Foundation data elements are critical for ITSM and ITOM alignment. In which domain do foundational elements such as 'Location', 'Company', 'Group', and 'Product (Model)' strictly belong?",
+            a: ["Build & Integration Domain", "Service Delivery Domain", "Manage Portfolio Domain", "Foundation Domain"],
+            ans: 3,
+            expl: "In the CSDM 5 conceptual model, elements such as Location, Team, Group, Company, and Product Model fall explicitly into the Foundation domain."
+        }
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>

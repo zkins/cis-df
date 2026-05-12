@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            cat: "Insight",
+            q: "Q1. Scenario: You are a compliance officer who needs a regular report of Configuration Items (CIs) that are more than 30 days old and have no owner or support group assigned. Which feature provides the most efficient way to build this requirement visually and automate the reporting?",
+            a: ["CMDB Query Builder with a scheduled email", "Unified Map exported to PDF", "Intelligent Search manual run", "CMDB Health Dashboard completeness scorecard"],
+            ans: 0,
+            expl: "The CMDB Query Builder allows you to visually construct this query and create a Schedule to send the output via email on a recurring basis."
+        },
+        {
+            cat: "Insight",
+            q: "Q2. Scenario: You want to perform a collective action, such as a bulk update or policy application, on all Linux servers connected to a specific database. What is the recommended way to use the CMDB Query Builder to facilitate this?",
+            a: ["Export to Excel and re-import.", "Use the saved query to populate a CMDB Group, then apply actions collectively.", "Write a background script.", "Link to an Event Management response."],
+            ans: 1,
+            expl: "Queries built and saved in the CMDB Query Builder can be used to populate a CMDB group, allowing you to apply actions collectively to all CIs in that group."
+        },
+        {
+            cat: "Insight",
+            q: "Q3. Scenario: After running a complex combination query, you need to share the raw data with a data analyst who prefers working in Excel. Which of the following is a supported export format directly from the Query Results pane?",
+            a: [".sql", "Excel (.xlsx)", ".png", ".yaml"],
+            ans: 1,
+            expl: "From the query results pane, you can select Export and choose formats including CSV, Excel (.xlsx), JSON, PDF, and XML."
+        },
+        {
+            cat: "Insight",
+            q: "Q4. Scenario: A user has scheduled a recurring CMDB query to be emailed. Because the query returns thousands of records, the email attachment is too large. What out-of-the-box option should the user utilize on the schedule record?",
+            a: ["Set a 'Row limit'.", "Select the option to zip (compress) the attachment.", "Change the export format to HTML.", "Use the CMDB Data Manager instead."],
+            ans: 1,
+            expl: "When creating a schedule for a CMDB Query, there is a native option to zip (compress) the attachment to handle large file sizes."
+        },
+        {
+            cat: "Insight",
+            q: "Q5. Scenario: A developer needs to modify the default behavior of the CMDB Query Builder across the platform. Where should they navigate to access these specific system properties?",
+            a: ["Configuration > CMDB Data Foundations Dashboard", "System Definition > Scheduled Jobs", "Configuration > CMDB Properties > Query Builder Properties", "CMDB Workspace > Management > Properties"],
+            ans: 2,
+            expl: "System properties for the CMDB Query Builder are accessed via Configuration > CMDB Properties > Query Builder Properties."
+        },
+        {
+            cat: "Insight",
+            q: "Q6. Scenario: During an investigation of a major outage, the root cause analysis team needs to see if any recent modifications were made to the underlying servers. Which specific element within the Unified Map interface allows them to view this temporal data?",
+            a: ["The Contextual side panel", "The Timeline", "The Mini-map navigator", "The Content Controls"],
+            ans: 1,
+            expl: "The Unified Map features a Timeline element that allows users to review historical 및 chronological changes that occurred on the mapped CIs."
+        },
+        {
+            cat: "Insight",
+            q: "Q7. Scenario: A Level 2 support agent opens the Unified Map to investigate a mapped application service. They want to quickly identify if any individual nodes on the map are currently experiencing issues. What visual cue provides this information?",
+            a: ["Flashing red text.", "Node badges indicating active incidents or changes.", "A pop-up alert box.", "A dotted line connecting the CIs."],
+            ans: 1,
+            expl: "In the Unified Map, node badges clearly indicate the presence of active incidents or changes on a specific CI node."
+        },
+        {
+            cat: "Maturity",
+            q: "Q8. Scenario: An IT manager wants to monitor the exact number of non-compliant hardware CIs missing a serial number with prescriptive metrics and links to fixes. Which dashboard is specifically designed for this?",
+            a: ["CMDB Health Dashboard", "CMDB and CSDM Data Foundations Dashboards", "Dependency Views Dashboard", "CI Class Manager"],
+            ans: 1,
+            expl: "Data Foundations Dashboards feature fixed, prescriptive metrics and links to remediation playbooks, tailored for CMDB managers."
+        },
+        {
+            cat: "Maturity",
+            q: "Q9. Scenario: Analyzing the 'Hardware CIs with Serial Numbers' indicator on the Data Foundations Dashboard. Why is a retired server with no serial number NOT an error for this specific metric?",
+            a: ["Retired servers always retain serial numbers.", "The metric only looks for CIs where Status='installed' and Operational='operational'.", "The metric applies to all classes universally.", "The dashboard doesn't filter by status."],
+            ans: 1,
+            expl: "The specific logic for this indicator looks for Computer/Network Gear where Status = installed and Operational status = operational."
+        },
+        {
+            cat: "Health",
+            q: "Q10. Scenario: A senior IT executive requests a high-level, customizable dashboard to present completeness, compliance, and correctness of the CMDB to external stakeholders. Which dashboard is best suited?",
+            a: ["CMDB Data Foundations Dashboard", "CMDB Health Dashboard", "Service Operations Workspace", "Unified Map"],
+            ans: 1,
+            expl: "The CMDB Health Dashboard provides three scorecards, is fully 및 highly customizable, and is suitable for senior IT leadership audiences."
+        },
+        {
+            cat: "Maturity",
+            q: "Q11. Scenario: You installed the CMDB Data Foundations Dashboard, but the tiles are blank. What is the most direct way to manually populate this data immediately?",
+            a: ["Execute Scheduled Jobs containing 'Get Well'.", "Run the 'glide.cmdb.query.nlq.activated' script.", "Open CI Class Manager hierarchy.", "Wait for the next instance upgrade."],
+            ans: 0,
+            expl: "After installation, data is only displayed after the base system's 'Get Well' scheduled jobs are executed."
+        },
+        {
+            cat: "Maturity",
+            q: "Q12. Scenario: To find the exact script logic used for a Data Foundations indicator, what should you search for in the Script Includes table?",
+            a: ["Scripts containing 'HealthScan'", "Scripts containing 'GetWell'", "Scripts containing 'NLQ'", "Scripts containing 'ServiceMapping'"],
+            ans: 1,
+            expl: "Technical details of indicator calculations are found in Script Includes containing the name 'GetWell'."
+        },
+        {
+            cat: "Maturity",
+            q: "Q13. Scenario: A system administrator wants to align their instance with best practices based on ServiceNow HealthScan definitions. Which dashboard's metrics are explicitly defined as a subset of HealthScan?",
+            a: ["CI Class Manager metrics", "Data Foundations Dashboards metrics", "Event Correlation metrics", "CMDB Health completeness metrics"],
+            ans: 1,
+            expl: "The Data Foundation Dashboard metrics are a subset of ServiceNow's HealthScan Definitions."
+        },
+        {
+            cat: "Insight",
+            q: "Q14. Scenario: A user types 'Linux' in Intelligent Search. What feature helps them construct the query faster without knowing the exact database schema?",
+            a: ["Background SQL execution.", "Dynamic list of relevant suggestions and past terms.", "Automatic Query Builder canvas.", "HealthScan trigger."],
+            ans: 1,
+            expl: "Intelligent Search provides dynamic suggestions as users type, including table names, partial phrases, and past search terms."
+        },
+        {
+            cat: "Insight",
+            q: "Q15. Scenario: How can the CMDB Admin (sn_cmdb_admin) provide a set of pre-configured Natural Language Queries (sample searches) for their users?",
+            a: ["Edit the records in the NLQ Sample Search [sn_cmdb_ws_nlq_sample_search] table.", "Edit the 'glide.cmdb.query.nlq.activated' property.", "Create a new 'Get Well NLQ' Job.", "Sample searches are hard-coded."],
+            ans: 0,
+            expl: "CMDB Admins can modify or create sample searches by directly editing records in the NLQ Sample Search table."
+        },
+        {
+            cat: "Outcome",
+            q: "Q16. Scenario: According to documented ServiceNow customer outcomes, a healthy CMDB integrated with ITSM can result in what percentage of faster incident resolution?",
+            a: ["15%", "38%", "82%", "604%"],
+            ans: 1,
+            expl: "ServiceNow customers have found that a healthy CMDB and ITSM can result in 38% faster incident resolution."
+        },
+        {
+            cat: "ITSM",
+            q: "Q17. Scenario: During an incident investigation, a support agent identifies a faulty CI. To see all related Business Services and Offerings, what UI action should they take on the Incident form?",
+            a: ["Select 'Refresh Impacted Services' to populate the related list.", "Run an Intelligent Search query.", "Navigate to Data Foundations Dashboard.", "Export CI to XML."],
+            ans: 0,
+            expl: "Using the 'Refresh Impacted Services' action populates the Impacted Services related list with Services and Offerings associated with the CI."
+        },
+        {
+            cat: "ITSM",
+            q: "Q18. Scenario: To streamline Change Management, what happens automatically when a targeted CI is selected on the Change form?",
+            a: ["'Managed By' user is added to CAB.", "The 'Change Group' value from the CI auto-populates the Assignment Group field.", "Unified map is generated.", "Data Normalization plugin runs."],
+            ans: 1,
+            expl: "When a CI is selected, its 'Change Group' value auto-populates the Assignment Group field on the Change form."
+        },
+        {
+            cat: "ITOM",
+            q: "Q19. Scenario: Multiple alerts relate to the same critical application. What AIOps capability leverages the CMDB to group these alerts together based on business importance?",
+            a: ["Vulnerability Identification", "Lifecycle Management", "Event Correlation", "Data Normalization"],
+            ans: 2,
+            expl: "Event Correlation leverages the CMDB to group events triggered on different components that relate to the same critical application."
+        },
+        {
+            cat: "Product View",
+            q: "Q20. Scenario: Which ServiceNow product area directly utilizes a well-maintained CMDB to align cloud spend to specific business initiatives?",
+            a: ["IT Asset Management", "Cloud", "DevOps", "Customer Service Management"],
+            ans: 1,
+            expl: "The 'Cloud' product view utilizes the CMDB to gain visibility of cloud resources and align spend to business initiatives."
+        },
+        {
+            cat: "Product View",
+            q: "Q21. Scenario: How does a healthy CMDB integration directly support DevOps team requirements for governance and traceability?",
+            a: ["Customer impact prioritization.", "Ensuring governance and traceability of the CI/CD process through a structured data model.", "Auto-purchase of software licenses.", "Service impact discovery."],
+            ans: 1,
+            expl: "In the context of DevOps, the CMDB provides value by 및 ensuring governance and traceability of the CI/CD process."
+        },
+        {
+            cat: "Asset",
+            q: "Q22. Scenario: Before rolling out SAM, what foundational CMDB step consolidates vendor names like 'Microsoft' and 'MSFT' into a single standard name?",
+            a: ["Combination Query", "Enabling the Data Normalization Plugin", "Activating glide.cmdb.health.activated", "Executing Get Well Job"],
+            ans: 1,
+            expl: "The Data Normalization Plugin ensures vendor names are standardized and consolidated before SAM implementation."
+        },
+        {
+            cat: "Asset",
+            q: "Q23. Scenario: What specific asset management capability relies on accurate CI data to prevent overspending by identifying underutilized assets?",
+            a: ["Lifecycle Management", "Cost Control", "Automated Response", "Threat Impact Analysis"],
+            ans: 1,
+            expl: "Accurate CI data helps organizations avoid overspending through 'Cost Control' by identifying underutilized assets."
+        },
+        {
+            cat: "Security",
+            q: "Q24. Scenario: Before an incident is assigned to a security analyst, the affected CI is cross-referenced with the CMDB. What is the primary purpose of this in Security Operations?",
+            a: ["Normalize manufacturer name.", "Determine incident priority based on CI criticality and associated service.", "Verify serial number for warranty.", "Auto-delete the vulnerable CI."],
+            ans: 1,
+            expl: "Cross-referencing the CI with the CMDB ensures incidents impacting critical services are prioritized appropriately."
+        },
+        {
+            cat: "Maturity",
+            q: "Q25. Scenario: According to the maturity model, which of the following data management practices is considered the most advanced ('Fly' level)?",
+            a: ["Hardware CIs with Serial Numbers", "Dynamic CI Groups with CMDB Group", "CIs Processed via the IRE", "Information Objects with Business Application relationship"],
+            ans: 2,
+            expl: "Processing CIs via the IRE (Identification and Reconciliation Engine) falls under the advanced 'Fly' maturity level."
+        },
+        {
+            cat: "Maturity",
+            q: "Q26. Scenario: Ensuring 'Hardware CIs with Serial Numbers' falls under which phase of the Data Foundations maturity model?",
+            a: ["Best Practices", "Crawl", "Walk", "Fly"],
+            ans: 1,
+            expl: "The metric 'Hardware CIs with Serial Numbers' corresponds to the foundational 'Crawl' phase."
+        },
+        {
+            cat: "Insight",
+            q: "Q27. Scenario: A user types 'Show me all Windows servers with critical incidents' in Intelligent Search. What interface element will be presented to execute this multi-table query?",
+            a: ["Raw SQL code prompt.", "A 'View in Query Builder' button to open the canvas.", "Service Mapping plugin prompt.", "Export to Excel option."],
+            ans: 1,
+            expl: "When a query involves multiple tables, a 'View in Query Builder' button appears to fully 및 visually construct the query."
+        },
+        {
+            cat: "Insight",
+            q: "Q28. Scenario: What system property must be verified as enabled to manage the Intelligent Search (NLQ) integration in CMDB Workspace?",
+            a: ["sn_cmdb_admin.nlq.property", "glide.cmdb.workspace.enabled", "glide.ui.unified_map.active", "glide.cmdb.query.nlq.activated"],
+            ans: 3,
+            expl: "Intelligent Search for CMDB is managed by the system property 'glide.cmdb.query.nlq.activated'."
+        },
+        {
+            cat: "Insight",
+            q: "Q29. Scenario: Which specific control in the Unified Map allows users to pan and view the entire map structure at a high level when the map is large?",
+            a: ["The Timeline", "The Contextual side panel", "The Mini-map navigator", "The Content Controls"],
+            ans: 2,
+            expl: "The 'Mini-map navigator' in the Unified Map is used to view a high-level representation and navigate around large canvases."
+        },
+        {
+            cat: "Maturity",
+            q: "Q30. Scenario: What structured guidelines, linked directly from Data Foundations Dashboard indicators, provide step-by-step fixes for non-compliant CIs?",
+            a: ["CMDB Query Builder templates", "HealthScan automated scripts", "Remediation Playbooks", "Service Mapping Patterns"],
+            ans: 2,
+            expl: "Remediation Playbooks provide context 및 step-by-step guidelines to fix issues and bring CIs into compliance."
+        }
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>

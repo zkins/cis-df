@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            cat: "Ingestion",
+            q: "[Style B: Sequence] What is the correct sequence of steps when using the IntegrationHub ETL process?",
+            a: ["Map to CMDB → Cleanse Data → Basic Details → Preview → Schedule", "Basic Details → Cleanse Data → Map to CMDB → Preview → Schedule", "Cleanse Data → Map to CMDB → Basic Details → Schedule → Preview", "Preview → Basic Details → Cleanse Data → Map to CMDB → Schedule"],
+            ans: 1,
+            expl: "The correct sequence for the IntegrationHub ETL process is Basic Details → Cleanse Data → Map to CMDB → Preview → Schedule."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] According to the CSDM 5.0 conceptual model, in which domain does the 'Business Application' component reside?",
+            a: ["Foundation Domain", "Service Delivery Domain", "Design & Planning Domain", "Manage Portfolio Domain"],
+            ans: 2,
+            expl: "In the CSDM framework, the Business Application component is located within the Design Domain (Design & Planning)."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style A: Scenario] A customer wants to import data from an external Excel file into the CMDB. They want to prevent duplicates and ensure the data strictly follows standard CMDB identification rules. What is the most recommended method?",
+            a: ["Use System Import Sets and Transform Maps without any scripting.", "Directly insert data into SQL tables.", "Use IntegrationHub ETL or configure an onBefore script calling the IRE API.", "Run Horizontal Discovery on the Excel file."],
+            ans: 2,
+            expl: "To import data from external sources like Excel while preventing duplicates and following CMDB standard identification rules, the most recommended method is using IntegrationHub ETL or an onBefore script to call the IRE API."
+        },
+        {
+            cat: "Licensing",
+            q: "[Style C: Constraints] ITOM visibility licensing is generally required to use Service Graph Connectors that leverage the IRE. Which of the following connectors is the ONLY exception to this licensing rule?",
+            a: ["Service Graph Connector for AWS", "Service Graph Connector for Jamf", "Service Graph Connector for SCCM", "Service Graph Connector for Microsoft Intune"],
+            ans: 2,
+            expl: "ITOM visibility licensing is required to use Service Graph connectors that leverage the IRE with the exception of SCCM."
+        },
+        {
+            cat: "Health",
+            q: "[Style C: Constraints] A CMDB administrator notices that the CMDB Health Dashboard scores are not updating and remain at 0%. What is the very first thing they should check?",
+            a: ["Whether the CSDM components are populated.", "Whether the related Scheduled Jobs used to populate the scorecards are activated.", "Whether Discovery has run in the last 24 hours.", "Whether the ITOM Visibility license is active."],
+            ans: 1,
+            expl: "CMDB Health Dashboard scheduled jobs used to populate the various scorecards are not turned on by default and must be activated."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] In the CSDM 5.0 conceptual model, which domain contains the 'Dynamic CI Group' component?",
+            a: ["Foundation", "Service Delivery", "Design & Planning", "Manage Portfolio"],
+            ans: 1,
+            expl: "In the CSDM 5 diagram, the Dynamic CI Group is located within the Service Delivery domain."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style A: Scenario] A security team refuses to allow external discovery solutions to remotely connect to devices within a secure network segment. Which ServiceNow tool is best suited to perform discovery and real-time monitoring in this scenario?",
+            a: ["ServiceNow Horizontal Discovery via MID Server", "Service Mapping (Top-Down)", "Agent Client Collector (ACC)", "IntegrationHub ETL REST API"],
+            ans: 2,
+            expl: "Agent Client Collector (ACC) is a key enabler for the discovery of devices in a secure network where the security team does not want external discovery solutions to remotely connect to them."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style A: Scenario] An organization needs to import and normalize high-quality data from monitoring tools like SolarWinds and Dynatrace into the CMDB. They want to avoid extensive customization. What is the best practice approach?",
+            a: ["Use out-of-the-box Service Graph Connectors.", "Build custom REST APIs from scratch.", "Manually import Excel spreadsheets weekly.", "Use unencrypted Import Sets."],
+            ans: 0,
+            expl: "ServiceNow provides several out-of-the-box connectors designed to simplify the integration process without needing extensive customization."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style B: Sequence] When planning a CMDB import using classic Import Sets and Transform Maps, what is the correct order of the import process steps?",
+            a: ["Build transform maps → Confirm import data → Review source data.", "Review source data and understand target table requirements → Build transform maps and define order → Confirm import data and relationships.", "Confirm import data → Review source data → Build transform maps.", "Define order → Confirm relationships → Review target tables."],
+            ans: 1,
+            expl: "The CMDB Import Process sequence is: 1. Review source data. 2. Build transform maps. 3. Confirm import data."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style B: Sequence] During the CI identification process within the IRE, what sequence of actions occurs before a CI is updated or created?",
+            a: ["Data Ingestion → Duplicate Prevention → Attribute Matching.", "Attribute Matching → Data Ingestion → Duplicate Prevention.", "Data Ingestion → Attribute Matching → Duplicate Prevention.", "Duplicate Prevention → Attribute Matching → Data Ingestion."],
+            ans: 2,
+            expl: "The identification process flow includes Data Ingestion, followed by Attribute Matching, and ensures Duplicate Prevention."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] Based on the CSDM 5.0 diagram, where do elements like Location, Team, Group, Company, and Product (Model) reside?",
+            a: ["Service Consumption", "Manage Portfolio", "Build & Integration", "Foundation"],
+            ans: 3,
+            expl: "Foundation data includes Location, Team, Group, Company, Business Unit, Department, and Product (Model)."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] In the CSDM 5.0 conceptual model, the 'Information Object' component is located within which domain?",
+            a: ["Build & Integration", "Foundation", "Design & Planning", "Service Delivery"],
+            ans: 2,
+            expl: "In the CSDM 5 diagram, the Information Object component is located in the Design & Planning domain."
+        },
+        {
+            cat: "Governance",
+            q: "[Style C: Constraints] A CMDB admin wants to automate data retirement using CMDB Data Manager Life Cycle Policies. What additional consideration or constraint must be met for policies like Retire, Archive, and Delete to function?",
+            a: ["All CIs must have a populated serial number.", "An active life cycle rule must exist for each targeted class in the policy.", "The ITOM Visibility license must be active.", "De-duplication templates must be turned off."],
+            ans: 1,
+            expl: "Additional Considerations: Some policy types, such as Retire, Archive, and Delete, require an active life cycle rule to exist for each targeted class."
+        },
+        {
+            cat: "Governance",
+            q: "[Style C: Constraints] While using the Duplicate CI Remediation Wizard, the administrator successfully sets up rules. What is an additional consideration or constraint of this specific wizard tool?",
+            a: ["It permanently modifies the Identification Rules.", "It requires manual effort to resolve each de-duplication task generated.", "It requires a separate premium license.", "It only works on custom CI classes."],
+            ans: 1,
+            expl: "Additional Considerations: Requires manual effort to resolve each de-duplication task generated."
+        },
+        {
+            cat: "Governance",
+            q: "[Style C: Constraints] Because De-Duplication Templates handle duplicates automatically on a scheduled basis, what is highly recommended before they are published?",
+            a: ["Purchasing the ITOM Health license.", "Disabling the CMDB Health Dashboard.", "In-depth testing of the de-duplication template.", "Running horizontal discovery."],
+            ans: 2,
+            expl: "Duplicates are automatically handled on a scheduled basis, so in-depth testing of the de-duplication template prior to being published is highly recommended."
+        },
+        {
+            cat: "Governance",
+            q: "[Style A: Scenario] An organization wants to auto-populate the 'Managed By Group' for Windows Servers. If a server CI is managed by a Technical Service Offering and also belongs to a class configured in the CI Class Manager, which setting takes priority?",
+            a: ["Technology Management Offering (Priority 1) takes precedence over CI Class Manager (Priority 2).", "CI Class Manager (Priority 1) takes precedence over Technology Management Offering (Priority 2).", "Both are merged equally into a Dynamic CI Group.", "Whichever was created most recently takes priority."],
+            ans: 0,
+            expl: "For a given CI, the Managed By Group value from its corresponding Technology Management Offering (Priority 1) takes precedence."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style A: Scenario] An organization wants to eliminate technical debt by removing a custom CI class created years ago. What is the recommended best practice?",
+            a: ["Delete the custom class directly from the database table.", "Utilize CI Class Manager to identify a baseline class, move CIs to standard ServiceNow classes, and map attributes correctly.", "Archive the class using the Duplicate CI Remediator.", "Create a new custom Service Graph Connector."],
+            ans: 1,
+            expl: "If you are planning to eliminate technical debt, it is recommended to utilize CI Class Manager to identify a baseline class and move CIs to standard classes."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style B: Sequence] What is the correct sequence of phases systematically followed by ServiceNow Discovery?",
+            a: ["Classification Phase → Scan Phase → Exploration Phase → Identification Phase", "Scan Phase → Identification Phase → Classification Phase → Exploration Phase", "Scan Phase → Classification Phase → Identification Phase → Exploration Phase", "Identification Phase → Classification Phase → Scan Phase → Exploration Phase"],
+            ans: 2,
+            expl: "ServiceNow Discovery operates in specific phases: Scan Phase, Classification Phase, Identification Phase, and Exploration Phase."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] According to the CSDM 5.0 model, where are 'Technology Management Service' and 'Technology Management Offering' located?",
+            a: ["Foundation", "Service Delivery", "Build & Integration", "Service Consumption"],
+            ans: 1,
+            expl: "In the CSDM 5 conceptual model, Technology Management Service and Offering are located in the Service Delivery domain."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] In the CSDM 5.0 framework, 'Business Capability' is placed in which domain?",
+            a: ["Service Consumption", "Foundation", "Manage Portfolio", "Design & Planning"],
+            ans: 3,
+            expl: "In the CSDM 5 diagram, Business Capability is located in the Design & Planning domain."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style A: Scenario] An IT department needs to quickly map an application service for a cloud-native, container-based virtual machine environment. Which Application Service type provides the best fit and a 'medium touch'?",
+            a: ["Service Mapping (Top-Down)", "Dynamic CI Group", "Tag-Based", "Manual Mapping"],
+            ans: 2,
+            expl: "Tag-based mapping is the best fit for cloud-native or Containers-based virtual machine environments, offering quick visualization and a medium touch."
+        },
+        {
+            cat: "Governance",
+            q: "[Style A: Scenario] To improve response times and minimize delays, an organization wants to automatically direct change requests to the appropriate approvers. Which foundation group field should be populated on the CI to streamline this process?",
+            a: ["Managed By Group", "Support Group", "Change Group", "Certification Group"],
+            ans: 2,
+            expl: "Change Group maps to the Change Assignment Group to streamline change routing."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style C: Constraints] While Import Sets and Transform Maps remain a viable solution, why does ServiceNow strongly recommend using IntegrationHub ETL for recent releases?",
+            a: ["Because Import Sets require a premium license.", "Because it offers a more modern user interface and natively utilizes identification rules to prevent duplicates.", "Because it bypasses the IRE to increase import speed.", "Because Import Sets cannot map to CMDB tables."],
+            ans: 1,
+            expl: "IntegrationHub ETL offers a more modern UI and natively utilizes identification rules (IRE) to prevent duplicates."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style C: Constraints] A developer is trying to create a new child class extending the 'Windows Server' class in the CI Class Manager, but the system prevents it. Which configuration constraint must be checked in the Basic Info tab?",
+            a: ["The Principal Class flag must be checked.", "The Extensible flag must be enabled.", "A Managed By Group must be assigned.", "The Default Product Model must be blank."],
+            ans: 1,
+            expl: "The Extensible flag in the Basic Info tab determines if the class can be extended. It must be enabled to create new child classes."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style B: Sequence] To optionally configure a Data Refresh Rule in the CI Class Manager, an administrator navigates to the specific class. Under which tab is this configuration located?",
+            a: ["Basic Info tab", "Attributes tab", "Identification Rule tab", "Reconciliation Rules tab"],
+            ans: 3,
+            expl: "Within CI Class Manager, for a specific class, under the Reconciliation Rules tab, there is an optional configuration to define a data refresh rule."
+        },
+        {
+            cat: "CSDM",
+            q: "[Style D: CSDM Model] In the CSDM 5.0 conceptual model, the 'SDLC Component' is found in which domain?",
+            a: ["Service Delivery", "Foundation", "Build & Integration", "Design & Planning"],
+            ans: 2,
+            expl: "In the CSDM 5 conceptual model diagram, the SDLC Component is located in the Build & Integration domain."
+        },
+        {
+            cat: "Governance",
+            q: "[Style A: Scenario] An administrator notices that multiple real-world servers are continuously updating a single CI record in the CMDB. The identification rules are not properly distinguishing unique identities, resulting in one CI being created when several should exist. What is this problem called?",
+            a: ["Duplicate CIs", "Stale CIs", "Orphan CIs", "Overloaded CIs"],
+            ans: 3,
+            expl: "Overloaded CIs occur when different CIs are identified as the same CI, meaning one CI is created when several should have been."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style A: Scenario] Reconciliation rules normally prevent unauthorized sources from overwriting existing data. However, if an administrator needs to further refine control and completely BLOCK INSERTS of new records from a specific unauthorized data source, what must they configure?",
+            a: ["Data Refresh Rules", "IRE Data Source Rules", "De-duplication Templates", "Extensible Flags"],
+            ans: 1,
+            expl: "To block inserts from a specific data source, a CMDB administrator can configure IRE Data Source Rules."
+        },
+        {
+            cat: "Ingestion",
+            q: "[Style C: Constraints] When invoking the CMDBTransformUtil API via an onBefore script during an Import Set process, what happens to any 'coalesce' values defined in the transform map?",
+            a: ["They trigger a reclassification task.", "They act as the primary identification rule.", "They are ignored and are therefore not technically required.", "They override the IRE rules."],
+            ans: 2,
+            expl: "When the CMDBTransformUtil API is invoked during the import process, any coalesce values defined in the transform map are ignored."
+        },
+        {
+            cat: "Configuration",
+            q: "[Style C: Constraints] An administrator wants to configure optional IRE conditions. Which specific system property must be modified and set to 'true' to enable this functionality?",
+            a: ["glide.identification_engine.enable_identifier_optional_condition", "glide.ire.block_inserts", "glide.identification_engine.non_cmdb_tables", "glide.ire.allow_null_attributes"],
+            ans: 0,
+            expl: "The optional IRE condition requires setting the system property glide.identification_engine.enable_identifier_optional_condition to true."
+        }
+    ];
+
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>

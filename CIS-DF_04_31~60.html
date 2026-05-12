@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIS-DF Exam Prep (50 Qs with Categories)</title>
+    <style>
+        :root { --sn-main: #293e40; --sn-success: #27ae60; --sn-error: #e74c3c; --sn-bg: #ffffff; --sn-accent: #81b5a1; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 60px; background: var(--sn-main); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer { font-size: 18px; font-weight: bold; }
+
+        .content { margin-top: 70px; margin-bottom: 80px; padding: 15px; }
+        .q-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: none; min-height: 380px; }
+        .q-card.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-cat { font-size: 11px; color: white; background: var(--sn-accent); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .question-text { font-size: 17px; line-height: 1.5; color: #333; margin-bottom: 20px; font-weight: 600; }
+
+        .options-list label { display: block; background: #f8f9fa; border: 2px solid #eee; padding: 16px; margin-bottom: 10px; border-radius: 12px; font-size: 15px; position: relative; cursor: pointer; transition: 0.2s; }
+        .options-list label.selected { border-color: var(--sn-main); background: #eef2f3; font-weight: bold; }
+        
+        .opt-num { display: inline-block; width: 22px; height: 22px; background: #ddd; color: #666; text-align: center; line-height: 22px; border-radius: 4px; margin-right: 10px; font-size: 11px; font-weight: bold; }
+        .selected .opt-num { background: var(--sn-main); color: white; }
+
+        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 70px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid #ddd; z-index: 1000; }
+        .btn { padding: 12px 18px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-prev { background: #eee; color: #333; }
+        .btn-next { background: var(--sn-main); color: white; }
+
+        #result-screen { display: none; padding: 20px; text-align: center; background: #f0f2f5; min-height: 100vh; }
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; border: 6px solid var(--sn-main); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 20px auto; background: white; }
+        .pass { color: var(--sn-success); border-color: var(--sn-success); }
+        .fail { color: var(--sn-error); border-color: var(--sn-error); }
+        
+        .report-card { text-align: left; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 14px; }
+        .review-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; text-align: left; border-left: 5px solid #ccc; font-size: 14px; }
+        .review-item.correct { border-left-color: var(--sn-success); }
+        .review-item.wrong { border-left-color: var(--sn-error); }
+    </style>
+</head>
+<body>
+
+<div id="intro" style="padding: 50px 20px; text-align: center;">
+    <h2 style="color: var(--sn-main);">ServiceNow CIS-DF Full Prep</h2>
+    <p style="color: #666;">50 Questions | Domains Categorized</p>
+    <button class="btn btn-next" style="width: 100%; padding: 20px; margin-top: 20px;" onclick="startExam()">시험 시작 (START)</button>
+</div>
+
+<div id="exam-ui" style="display:none;">
+    <div class="header">
+        <span id="q-idx">1 / 50</span>
+        <div class="timer" id="timer">60:00</div>
+    </div>
+    <div class="content" id="q-container"></div>
+    <div class="nav-bar">
+        <button class="btn btn-prev" id="prev-btn" onclick="move(-1)">PREV</button>
+        <button class="btn" style="background: var(--sn-success); color: white;" onclick="forceSubmit()">제출하기</button>
+        <button class="btn btn-next" id="next-btn" onclick="move(1)">NEXT</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>학습 결과</h1>
+    <div class="score-circle" id="res-score">0%</div>
+    <div class="report-card" id="res-detail"></div>
+    <div id="review-container"></div>
+    <button class="btn btn-next" style="width: 100%; margin: 30px 0;" onclick="location.reload()">다시 풀기</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            cat: "Health",
+            q: "Q1. Question: What specific negative impact is avoided by activating the CMDB Health Dashboards, based on the 'CMDB Health Dashboard Disabled' playbook?",
+            a: ["Increases storage consumption.", "Reduces the time spent on data validation and maintenance.", "Causes discovery to slow down.", "Increases manual data entry."],
+            ans: 1,
+            expl: "Activating the dashboard automates quality checks, significantly reducing manual effort in validating and maintaining CMDB data."
+        },
+        {
+            cat: "Health",
+            q: "Q2. Question: How does enabling the CMDB Health Dashboard impact the relationship with other IT teams?",
+            a: ["It restricts their access to CI data.", "It increases the trust in the quality of CMDB data for other teams.", "It requires them to manually verify every CI.", "It increases the number of incident records."],
+            ans: 1,
+            expl: "Visibility into data health builds confidence across the IT organization, ensuring teams can rely on the CMDB for their processes."
+        },
+        {
+            cat: "Maturity",
+            q: "Q3. Question: What is the exact percentage range required for a foundational metric to be color-coded Green on the Data Foundations Dashboards?",
+            a: ["Exactly 100%.", "More than 90%.", "Between 70-100%.", "Above 80%."],
+            ans: 1,
+            expl: "In the Data Foundations Dashboards, 'Green' indicates high compliance, which is defined as a score greater than 90%."
+        },
+        {
+            cat: "Maturity",
+            q: "Q4. Question: If a foundational metric shows a compliance percentage of 65% on the Data Foundations Dashboard, what color will its bar chart be?",
+            a: ["Red", "Yellow", "Green", "Grey"],
+            ans: 1,
+            expl: "Yellow indicates partial compliance, covering the range from 50% to 90%."
+        },
+        {
+            cat: "Maturity",
+            q: "Q5. Question: A foundational metric displays a red bar on the CMDB Data Foundations Dashboard. What does this indicate about its compliance percentage?",
+            a: ["Exactly 0%.", "Less than 50%.", "Between 50-70%.", "It means the job failed."],
+            ans: 1,
+            expl: "A red bar warns of low compliance, meaning less than 50% of the CIs meet the metric criteria."
+        },
+        {
+            cat: "Foundation",
+            q: "Q6. Question: When creating location records, which hierarchical structure approach is considered a general usage guideline?",
+            a: ["Locations should be flat.", "Locations should be hierarchical.", "Locations should be case-sensitive.", "Locations should be unique per user."],
+            ans: 1,
+            expl: "ServiceNow best practices recommend a parent/child hierarchy for locations to support better reporting and data remediation."
+        },
+        {
+            cat: "Foundation",
+            q: "Q7. Question: True or False: Populating the parent field only occasionally is a recommended guideline for location records.",
+            a: ["True", "False"],
+            ans: 1,
+            expl: "False. Guidelines emphasize that locations should be consistently hierarchical and clear to maintain data integrity."
+        },
+        {
+            cat: "CSDM",
+            q: "Q8. Question: Name two specific group attributes that are synchronized from a technical service offering to the underlying CIs within a dynamic CI group.",
+            a: ["Location and Company.", "Support Group and Managed by Group.", "Owner and Department.", "Category and Subcategory."],
+            ans: 1,
+            expl: "CSDM synchronization pushes technical accountability (Support/Managed by/Change groups) from the Offering down to the member CIs."
+        },
+        {
+            cat: "CSDM",
+            q: "Q9. Question: Does the CSDM group attribute synchronization business rule update the 'Owned by Group' attribute on underlying CIs?",
+            a: ["Yes, it syncs all group fields.", "No, it synchronizes Support Group, Managed by Group, and Assignment Group.", "Only if the CI is a server.", "Only if the 'Fly' phase is active."],
+            ans: 1,
+            expl: "The CSDM sync rule is specific to operational support groups (Support, Managed by, Change/Assignment) and does not include 'Owned by Group'."
+        },
+        {
+            cat: "Playbook",
+            q: "Q10. Question: How does governing the 'Handle Duplicate CIs in your CMDB' metric specifically improve Incident Management?",
+            a: ["It automatically resolves incidents.", "It enhances binding and CI selection for Incident Management.", "It deletes old incident records.", "It creates more incident tasks."],
+            ans: 1,
+            expl: "Eliminating duplicates ensures help desk staff select the correct, single record for a CI, ensuring accurate incident history and service mapping."
+        },
+        {
+            cat: "Playbook",
+            q: "Q11. Question: What UI benefit does a business gain by properly governing duplicate CIs in the CMDB?",
+            a: ["Dark mode becomes available.", "It reduces confusion from duplicate records appearing in the list view.", "The search bar moves to the top.", "It increases the font size."],
+            ans: 1,
+            expl: "Fewer duplicates mean cleaner list views and less confusion for IT staff searching for specific configuration items."
+        },
+        {
+            cat: "Playbook",
+            q: "Q12. Question: If a technical service offering lacks populated owners, which Get Well Playbook should be referenced to address this?",
+            a: ["The 'Stale CI' playbook.", "The 'Technical Service Offerings with Support Group or Change Group Populated' playbook.", "The 'CSDM Crawl' playbook.", "The 'IRE Identification' playbook."],
+            ans: 1,
+            expl: "This specific playbook provides guidance on ensuring accountability is defined at the Technical Service Offering level."
+        },
+        {
+            cat: "Playbook",
+            q: "Q13. Question: Which legacy field name on the Technical Service Offering was updated to 'Change group' in a previous release?",
+            a: ["Support group.", "Assignment group.", "Managed by group.", "Owner group."],
+            ans: 1,
+            expl: "The field 'Assignment group' was renamed to 'Change group' on the TSO to clarify its role in the Change Management lifecycle."
+        },
+        {
+            cat: "Foundation",
+            q: "Q14. Question: Why is the 'Parent' field on the location table particularly useful during data remediation?",
+            a: ["It speeds up the database.", "It assists with the remediation of duplicate locations.", "It encrypts the location name.", "It is required for the MID server."],
+            ans: 1,
+            expl: "A clear hierarchy (Parent field) allows administrators to identify overlapping location branches and merge duplicates effectively."
+        },
+        {
+            cat: "Maturity",
+            q: "Q15. Question: Which scheduled job must be executed to immediately update the CSDM foundational metrics?",
+            a: ["Discovery IP scan.", "CSDM Data Foundations PA metric Collection.", "HealthScan Audit.", "Cleanse Stale CIs."],
+            ans: 1,
+            expl: "Running the PA (Performance Analytics) metric collection job manually forces the dashboard to refresh its compliance data immediately."
+        },
+        {
+            cat: "Foundation",
+            q: "Q16. Question: Among the three pillars for successful foundational data, which one is directly concerned with bringing data into the CMDB?",
+            a: ["Govern.", "Ingest.", "Insight.", "Build."],
+            ans: 1,
+            expl: "The 'Ingest' pillar covers all methods of data acquisition, such as Discovery, Connectors, and Import Sets."
+        },
+        {
+            cat: "Foundation",
+            q: "Q17. Question: Which of the three foundational data pillars focuses on deriving actionable intelligence and reporting?",
+            a: ["Govern.", "Ingest.", "Insight.", "Refine."],
+            ans: 2,
+            expl: "The 'Insight' pillar is about visualizing data via Dashboards, Query Builder, and Unified Maps to drive business decisions."
+        },
+        {
+            cat: "Foundation",
+            q: "Q18. Question: If an organization wants to focus strictly on health metric improvement within their CMDB, which foundational pillar are they prioritizing?",
+            a: ["Ingest.", "Insight.", "Govern.", "Planning."],
+            ans: 2,
+            expl: "The 'Govern' pillar focuses on data quality (Completeness, Correctness, Compliance) and maintenance."
+        },
+        {
+            cat: "Playbook",
+            q: "Q19. Question: What specific IT process directly benefits when the 'Percentage of Dynamic CI Groups with CMDB Group' metric is governed?",
+            a: ["Software licensing.", "Change Management (e.g., better patch management for all servers).", "User provisioning.", "Password reset."],
+            ans: 1,
+            expl: "Dynamic CI Groups enable Change Management to target groups of CIs (like all servers for a specific service) for bulk actions like patching."
+        },
+        {
+            cat: "CSDM",
+            q: "Q20. Question: What is the exact name of the business rule responsible for synchronizing group attributes from a TSO to a dynamic CI group's CIs?",
+            a: ["Sync CI Attributes.", "CSDM - Sync Group Attributes.", "Technical Service Offering Updater.", "IRE Attribute Sync."],
+            ans: 1,
+            expl: "This is the specific OOTB business rule that handles the inheritance of support/managed by groups from the TSO to member CIs."
+        },
+        {
+            cat: "Playbook",
+            q: "Q21. Question: Why is it recommended to run a remediation playbook fix script in a development or test environment first?",
+            a: ["Scripts cannot run in production.", "To ensure it is a safe and recommended process before applying it to production.", "To make the script run faster.", "To allow other users to see the script."],
+            ans: 1,
+            expl: "Running scripts in sub-production environments first prevents accidental data corruption in the live environment."
+        },
+        {
+            cat: "Playbook",
+            q: "Q22. Question: When running a fix script from Scripts - Background, which specific checkbox must be selected to allow for reverting changes?",
+            a: ["Disable all business rules.", "Record for rollback.", "Preview changes.", "Execute in background."],
+            ans: 1,
+            expl: "Checking 'Record for rollback' allows you to undo the script's changes if the result is not what was expected."
+        },
+        {
+            cat: "Foundation",
+            q: "Q23. Question: What sequence of clicks on the CMDB Data Foundations Dashboard is required to view the actual list of duplicate location records?",
+            a: ["Click Management > Data Manager.", "Select and open the Duplicate Locations tile and then select Show Records.", "Navigate to sys_user.list.", "Search for 'Duplicate' in Intelligent Search."],
+            ans: 1,
+            expl: "Data Foundations Dashboard allows you to drill down into the 'Duplicate Locations' tile to see the raw list of problematic records."
+        },
+        {
+            cat: "Playbook",
+            q: "Q24. Question: True or False: Properly governing the 'Refresh Stale CIs in your CMDB' metric decreases decision-making accuracy.",
+            a: ["True", "False"],
+            ans: 1,
+            expl: "False. Governing staleness ensures data is current, which leads to MORE accurate data and better decision-making."
+        },
+        {
+            cat: "Playbook",
+            q: "Q25. Question: At what specific state transition should the Configuration item field be made mandatory to ensure it is populated on an incident form?",
+            a: ["When the incident is created.", "Once an incident state moves from In progress to Resolved.", "When the incident is assigned to a group.", "When a work note is added."],
+            ans: 1,
+            expl: "ServiceNow best practice suggests making the CI mandatory at resolution to ensure the root cause was identified without blocking initial creation."
+        },
+        {
+            cat: "Playbook",
+            q: "Q26. Question: How can an administrator make it easier for fulfillers to find the affected CI on an incident form?",
+            a: ["By changing the field type to text.", "By configuring the field with a reference qualifier.", "By deleting all other CIs.", "By making the field read-only."],
+            ans: 1,
+            expl: "Reference qualifiers filter the CI list to only show relevant CIs (e.g., those belonging to the affected user), making it easier to select the right one."
+        },
+        {
+            cat: "CSDM",
+            q: "Q27. Question: In the CSDM framework, does the Technical Service define the Dynamic CI group directly, or does the Technical Service Offering do this?",
+            a: ["The Technical Service does it.", "The Technical service offering contains a Dynamic CI group.", "The Business Application does it.", "The Application Service does it."],
+            ans: 1,
+            expl: "The Technical Service Offering is the level where the specific scope of CIs is defined via a Dynamic CI Group."
+        },
+        {
+            cat: "Maturity",
+            q: "Q28. Scenario: In what scenario would you ignore the dashboard's default Priority ranking and remediate a lower-priority metric before a higher-priority one?",
+            a: ["When the higher priority is too hard to fix.", "When the lower-priority metric has a much higher internal business driver.", "When the admin is bored.", "When the 'Crawl' phase is finished."],
+            ans: 1,
+            expl: "Internal organizational needs (like a specific security audit) can make a 'low priority' dashboard item a 'top priority' for the business."
+        },
+        {
+            cat: "Foundation",
+            q: "Q29. Scenario: If a company imports location names but the source data is not maintained, what issue is likely to occur in the CMDB?",
+            a: ["The instance will crash.", "Duplicate locations will be found in the location table.", "The MID server will stop working.", "Passwords will expire."],
+            ans: 1,
+            expl: "Poor source data governance leads to messy foundational data, typically resulting in duplicate location or user records."
+        },
+        {
+            cat: "Governance",
+            q: "Q30. Question: What is a primary governance failure that leads to the creation of custom tables beginning with 'u_cmdb_ci'?",
+            a: ["Using Discovery.", "No review process in the creation of CI classes, or no governance process for customization.", "Upgrading the instance.", "Installing the CSDM plugin."],
+            ans: 1,
+            expl: "Lack of a formal review board leads to 'sprawl' where developers create new tables instead of correctly extending OOTB classes."
+        }
+    ];
+    let currentQ = 0;
+    let timer;
+    let timeLeft = 60 * 60;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    function startExam() {
+        document.getElementById('intro').style.display = 'none';
+        document.getElementById('exam-ui').style.display = 'block';
+        renderQuestions();
+        showQuestion(0);
+        startTimer();
+    }
+
+    function renderQuestions() {
+        const container = document.getElementById('q-container');
+        container.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'q-card';
+            div.id = `q-${i}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div>
+                <div class="question-text">Q${i+1}. ${q.q}</div>
+                <div class="options-list">
+                    ${q.a.map((opt, oi) => `
+                        <label id="label-${i}-${oi}" onclick="selectOpt(${i}, ${oi})">
+                            <span class="opt-num">${String.fromCharCode(65 + oi)}</span>
+                            <span>${opt}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function selectOpt(qi, oi) {
+        userAnswers[qi] = oi;
+        document.querySelectorAll(`#q-${qi} label`).forEach(l => l.classList.remove('selected'));
+        document.getElementById(`label-${qi}-${oi}`).classList.add('selected');
+        setTimeout(() => { if (qi < questions.length - 1) move(1); }, 300);
+    }
+
+    function showQuestion(idx) {
+        document.querySelectorAll('.q-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`q-${idx}`).classList.add('active');
+        document.getElementById('q-idx').innerText = `${idx + 1} / ${questions.length}`;
+        currentQ = idx;
+    }
+
+    function move(dir) {
+        let target = currentQ + dir;
+        if (target >= 0 && target < questions.length) showQuestion(target);
+    }
+
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60);
+            let s = timeLeft%60;
+            document.getElementById('timer').innerText = `${m}:${s<10?'0'+s:s}`;
+            if(timeLeft <= 0) showResult();
+        }, 1000);
+    }
+
+    function forceSubmit() {
+        if(!confirm("시험을 종료하고 제출하시겠습니까?")) return;
+        clearInterval(timer);
+        showResult();
+    }
+
+    function showResult() {
+        let score = 0;
+        let catStats = {};
+        const reviewContainer = document.getElementById('review-container');
+        reviewContainer.innerHTML = "<h3>상세 리뷰</h3>";
+
+        questions.forEach((q, i) => {
+            if(!catStats[q.cat]) catStats[q.cat] = {correct: 0, total: 0};
+            catStats[q.cat].total++;
+
+            const isCorrect = userAnswers[i] === q.ans;
+            if(isCorrect) {
+                score++;
+                catStats[q.cat].correct++;
+            }
+            
+            const div = document.createElement('div');
+            div.className = `review-item ${isCorrect ? 'correct' : 'wrong'}`;
+            div.innerHTML = `
+                <div class="q-cat">${q.cat}</div><br>
+                <b>Q${i+1}. ${q.q}</b><br>
+                정답: <span style="color:var(--sn-success)">${q.a[q.ans]}</span><br>
+                선택: <span style="color:${isCorrect ? 'var(--sn-success)' : 'var(--sn-error)'}">${userAnswers[i] !== null ? q.a[userAnswers[i]] : "미선택"}</span><br>
+                <p style="margin-top:8px; font-size:12px; color:#666;">💡 ${q.expl}</p>
+            `;
+            reviewContainer.appendChild(div);
+        });
+
+        let reportHtml = "<h3>도메인별 성취도</h3>";
+        for(let key in catStats) {
+            let p = Math.round((catStats[key].correct / catStats[key].total) * 100);
+            reportHtml += `<p><b>${key}</b>: ${p}% (${catStats[key].correct}/${catStats[key].total})</p>`;
+        }
+
+        const finalScore = Math.round((score / questions.length) * 100);
+        document.getElementById('exam-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('res-score').innerText = finalScore + "%";
+        document.getElementById('res-score').className = `score-circle ${finalScore >= 70 ? 'pass' : 'fail'}`;
+        document.getElementById('res-detail').innerHTML = reportHtml;
+        window.scrollTo(0,0);
+    }
+</script>
+</body>
+</html>
